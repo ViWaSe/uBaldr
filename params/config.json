@@ -1,24 +1,9 @@
 {
-    "BMP180_settings": [
-        {
-            "oversample": 2,
-            "press_correction": 0,
-            "sealevel": 101325,
-            "temp_correction": 0
-        }
-    ],
     "Header": [
         {
             "Autor": "vwall",
             "Comment": "I2C and BMP-settings only used if Temp-sensor is present. values are default-values. Might be necessary to adjust. You also need the BMP Python-Module.",
-            "Version": "5.3"
-        }
-    ],
-    "I2C-Settings": [
-        {
-            "frequency": 10000000,
-            "scl-pin": 1,
-            "sda-pin": 0
+            "Version": "5.4"
         }
     ],
     "LightControl_settings": [
@@ -32,7 +17,6 @@
     ],
     "MQTT-config": [
         {
-            "Alias": "device-alias(not used in this version)",
             "Broker": "192.168.178.121",
             "Client": "test",
             "md_pin": "N/A",
@@ -51,27 +35,16 @@
             "Sensor": false
         }
     ],
-    "Sensor_settings": [
-        {
-            "debouncing_period": 500,
-            "Input_Pin": 14,
-            "message": "motion_detected",
-            "Method": "PULL_DOWN",
-            "Mode": "online"
-        }
-    ],
-    "switch": [
-        {
-            "device_1": 16
-        }
-    ],
     "Wifi-config": [
         {
             "country": "DE",
-            "IP": "",
+            "IP": "192.168.178.90",
             "PW": "",
             "SSID": "",
-            "Hostname": ""
+            "Hostname": "Pico_test",
+            "onboard_led": 21,
+            "led_inverted": true,
+            "led_active": true
         }
     ]
 }

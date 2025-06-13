@@ -3,10 +3,13 @@
 - changelog -
 
 # New Functions:
-> General improvement of the code
-> Encapsulation of the MQTT functions in a new MQTT handler module for cleaner and more flexible code
-> Added command map to order.py for better handling
-> Moved the config-files to the /params-directory
+> Added ESP-32 Support
+	- Added 2 new items to config.json, "onboard_led" and "led_inverted" as the onboard_led is usually pin21 and also the value is inverted on ESP32-3
 
 # Bugfixes:
->
+> Corrected problem with wrong configured command-map in order.py
+> Watchdog was not working proberly and lost network Connection was not detected every time. Also the reconnect to the MQTT-Broker did not work. This has been fixed
+> Changed the network-check-function. Before it was a ping to the Google-DNS. Now it is more simplified:
+	- The client sends an “echo” to the /status topic and waits for the response with wait_msg(). The program is paused until it receives a response from the broker.
+	- It does not matter what is in the answer string. It continues when a message is received on the /order-topic. Will maybe improve this function later…
+> In some cases Baldr was not able to connect to WiFi. You then had to power-cycle the device and it (usually) worked. The reason was that the wifi-chip was not yet ready when the Connection started. This has been fixed.
