@@ -33,12 +33,12 @@
     "MQTT-config": [
         {
             "Alias": "device-alias(not used in this version)",
-            "Broker": " ",
+            "Broker": "192.168.178.121",
             "Client": "test",
             "md_pin": "N/A",
             "Port": 1883,
-            "PW": "",
-            "User": "",
+            "PW": "loki",
+            "User": "picow",
             "check_intervall": 10
         }
     ],
@@ -71,7 +71,7 @@
             "IP": "",
             "PW": "",
             "SSID": "",
-            "Hostname": "Pico_test"
+            "Hostname": ""
         }
     ]
 }

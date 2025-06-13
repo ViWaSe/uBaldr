@@ -1,123 +1,115 @@
 # Smarthome Order-Modul by vwall
 
-Version = '5.3'
+version = '6.1.1'
 
-import LightControl as LC
-import switch
 import json
+from LightControl import LC
 from logger import Log
+from hex_to_rgb import hex_to_rgb
 
-class proc(object):
-    def __init__(
-            self, 
-            data='temp.json'
-            ):   
-        with open (data) as f:    
-            self.data = json.load(f)
+class Proc:
+    def __init__(self, data=None):
+        if data is None:
+            raise ValueError("Data error.")
+        self.data = data
     
-    # Device_control:
-    def dev_control(self):
-        dev_name    = self.data['device']
-        command     = self.data['command']
-        payload     = self.data['payload']
-
-        if command == 'switch':
-            switch.on_off(dev_name, payload)
-        elif command == 'timer':
-            switch.timer(dev_name, int(payload))
-        elif command == 'pin':
-            pin = self.data('pin')
-            switch.pin_control(pin, payload)
-        else:
-            pass
-    
-    # Light control function:
     def LC(self):
-        command 	    = self.data['command']
-        payload 	    = self.data['payload']
-        speed   	    = self.data['speed']
-        color_format 	= self.data['format']
-
-        if color_format == 'hex':
-            from hex_to_rgb import hex_to_rgb
-            color = hex_to_rgb(str(payload))
-        else:
-            color = payload
-        
-        # Change the LED-Pin if set in order string:
-        try:
-            LC.set_led(new_device=self.data['device']) 
-        except:
-            pass
-        
-        # Run the command in LightControl
-        if command == 'dim':
-            LC.dim(payload, speed).set()
-        elif command == 'line':
-            LC.line(color, speed)
-        elif command == 'on_off':
-            LC.on_off(payload)
-        elif command == 'get_lvl':
-            level = LC.ret_dim()
-            return level
-        else:
-            return 'LC: Command not found'
-        Log('Order', '[ INFO ]: ' + str(command))
-        return True
-    
-    # admin-functions
-    def admin(self):
-        if self.data['command'] == 'echo':
-            return 'alive'
-        
-        elif self.data['command'] == 'offline':
-            Log('MQTT', '[ INFO ]: Broker is offline. Probably shutdown.')
-            return 'conn_lost'
-        
-        elif self.data['command'] == 'get_conf':
-            from PicoClient import send_json as send
-            send('config.json')
-        
-        elif self.data['command'] == 'get_version':
-            from PicoClient import Version
-            if self.data['payload'] == 'all':
-                return Version
+        command = self.data['command']
+        payload = self.data['payload']
+        speed = self.data['speed']
+        if 'format' in self.data:
+            color_format = self.data['format']
+            if color_format == 'hex':
+                color = hex_to_rgb(str(payload)) if color_format == 'hex' else payload
             else:
-                ver = self.data['payload']
-                return Version[ver]
-        
-        elif self.data['command'] == 'change_qty':
-            LC.set_led_qty(self.data['new'])
-            LC.re_initiate_pixel()
-            Log('LC', '[ INFO ]: LED-Qty changed to '+str(self.data['new']))
-            return 'OK'
+                color = payload
 
-        elif self.data['command'] == 'get_qty':
-            qty = LC.pixel
-            return qty            
+        command_map = {
+            'dim': lambda: LC.set_dim(payload, speed),
+            'line': lambda: LC.line(color, speed),
+            'change_autostart': lambda: LC.change_autostart(self.data['new_value']),
+            'change_pixel_qty': lambda: LC.change_pixel_qty(self.data['new_value'])
+        }
         
+        if command in command_map:
+            command_map[command]()
+            # Log('Order', f'[ INFO  ]: Order sucessful. Command = {command}')
+            return True
         else:
-            pass
+            Log('Order', f'[ INFO  ]: Command not found. Command = {command}')
+            return 'LC: Command not found'
 
-# Order-processing function
-def run(json_string):
+    def admin(self):
 
-    # Create a tmp.json file from incoming string
-    tmp = open('temp.json', 'w')
-    tmp.write(json_string)
-    tmp.close()
+        command = self.data['command']
+        
+        command_map = {
+            'echo': lambda: 'alive',
+            'offline': lambda: self.handle_offline(),
+            'get_version': lambda: self.get_version(),
+            'change_qty': lambda: self.change_qty(),
+            'get_qty': lambda: LC.pixel,
+            'set_autostart': lambda: self.change_autostart_setting(),
+            'get_log': lambda: self.get_log(self.data['logfile'])
+        }
+        
+        return command_map.get(command, lambda: 'Command not found')()
     
-    with open ('temp.json') as f:    
-        data = json.load(f)
-    order = data['Type']  
-    order_instance = proc()
+    def handle_offline(self):
+        Log('MQTT', '[ INFO  ]: Broker is offline under normal conditions')
+        return 'conn_lost'
+
+
+    def get_version(self):
+        from PicoClient import version
+        if self.data['sub_system'] == 'all':
+            return version
+        else:
+            return version.get(self.data['sub_system'], 'Version nicht gefunden.') # type: ignore
+
+    def change_qty(self):
+        pass
+    
+    def change_autostart_setting(self):
+        pass
+
+    def get_log(self, sub):
+        try:
+            with open(sub, 'r') as f:
+                cont = f.read()
+                if not cont:
+                    return "Logdatei ist leer."
+                return cont
+        except Exception as e:
+            return f"Fehler beim Lesen der Logdatei: {e}"
+
+def run(json_string):
     try:
+        data = json.loads(json_string)
+
+        # Messager-version check
+        if 'messager_version' in data:
+            version = data['messager_version']
+            if float(version) == "1.2": 
+                order = data['sub_type']
+            else:
+                order = data['Type']
+        else:
+            order = data['Type']
+        
+        order_instance = Proc(data)
         call = getattr(order_instance, order)()
         return call
-    except:
-        return 'Command is not found. Check your input!'
-    
-
-# Beispiele:
-LC_string       = '{"Type": "LC", "device": "led_pin", "command": "line", "payload": [0,0,0,0], "speed": 5, "format": "rgbw"}'
+    except json.JSONDecodeError: # type: ignore
+        Log('Order', '[ ERROR ]: JSON-Format-Error')
+        return 'Ungültiges JSON-Format.'
+    except KeyError as e:
+        Log('Order', f'[ ERROR ]: Key-Error / Key not found - {e}')
+        return f"Key not found: {e}"
+    except AttributeError:
+        Log('Order', f'[ ERROR ]: Command not found')
+        return 'Command not found. Check your input!'
+    except Exception as e:
+        Log('Order', f'[ ERROR ]: Unknown Error - {e}')
+        return f"Unknown Error: {e}"
 

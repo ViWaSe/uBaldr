@@ -1,15 +1,12 @@
-# uBaldr version 5.3.3
+# uBaldr Version 6.1.1
 
-- Change Log -
+- changelog -
 
 # New Functions:
-> Added possibility to Change LED-quantity by sending command "change_qty". The qty is then changed in the config-file and will take affect after next boot
-> Added Support of CW/WW Neopixel-LEDs (Setting: bpp=3, usage: [ww, cw, not used])
-> Added possibility to change the hostname. -> micropython v1.21.0 or higher is required
-> Added wifi-error_handling for logging errors
-> Added new module 'logger.py' for better troubleshooting. The logfiles are created for each subsystem and stored in the /log/ directory
+> General improvement of the code
+> Encapsulation of the MQTT functions in a new MQTT handler module for cleaner and more flexible code
+> Added command map to order.py for better handling
+> Moved the config-files to the /params-directory
 
 # Bugfixes:
-> Fixed the issue, that the log-counter is reset after every power cycle and increased the maximum issues to 200. 
-> changed the check_status-function. Now it tries to ping the Google-DNS. If not successfull, reconnect.	
-> Added watchdog-funtion to PicoClient. This will ensure that a connection loss to the broker is detected after not getting messages after a Timeout of 360s
+>

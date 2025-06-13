@@ -1,22 +1,18 @@
 # Simple script to start the Device
-Version = '5.3.2'
+version = '6.1.1'
 
 # add subdirectories to path
-import sys
-sys.path.insert(0, "./modules")
-sys.path.insert(0, "./params")
-
-# start Light-Control
+import PicoWifi as wlan
+import PicoClient as MQTT
 import LightControl
 
-print('[ INFO ] Welcome to BALDR Version', Version)
+# start Light-Control
+print('[ INFO ] Welcome to BALDR Version', version)
 
 # Connect to WLAN using PicoWifi-Module
-import PicoWifi as wlan
 wlan.connect()
 print('[ INFO ] PicoWifi is connected!')
 
 # Establish MQTT-Connection 
-import PicoClient as MQTT
 print('[ INFO ] PicoClient is running!')
 MQTT.go()
