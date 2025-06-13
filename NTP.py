@@ -1,10 +1,14 @@
+# Time setting via NTP-Server
+
+# TODO: save time setting in json-file
+# TODO: Sommer- and Wintertime
+
 Version = '1.1'
 
-import machine, sys, json
+import machine
 import utime as time
 import usocket as socket
 import ustruct as struct
-from PicoWifi import Log
 
 # Winterzeit / Sommerzeit
 #GMT_OFFSET = 3600 * 1 # 3600 = 1 h (Winterzeit)

@@ -1,40 +1,61 @@
 {
-    "Wifi-config":
-    [
+    "BMP180_settings": [
         {
-        "wlanSSID":		    "",
-        "wlanPW":		    "",
-        "country":			"DE",
-        "Pico-IP":			null
+            "oversample": 2,
+            "press_correction": 0,
+            "sealevel": 101325,
+            "temp_correction": 0
         }
     ],
-
-    "MQTT-config":
-    [
+    "Header": [
         {
-        "mqttBroker":		"192.168.178.121",
-        "mqttPort":			1883,
-        "mqttClient": 		"None",
-        "mqttUser":			"picow",
-        "mqttPW":			"loki",
-        "PiTopic":			"None",
-        "Alias":			"None"
+            "Autor": "vwall",
+            "Comment": "I2C and BMP-settings only used if Temp-sensor is present. values are default-values. Might be necessary to adjust. You also need the BMP Python-Module.",
+            "Version": "5.1j"
         }
     ],
-
-    "Light-control_settings":
-    [
+    "I2C-Settings": [
         {
-        "led_anzahl":  		55,
-        "pixel_byte":		4,
-        "led_out_1": 		28,
-
-        "led_onboard": 		"LED",
-
-        "colour":			[0,0,0,0],
-        "dim_status":		100,
-        "start_power_on":	true
+            "frequency": 10000000,
+            "scl-pin": 1,
+            "sda-pin": 0
+        }
+    ],
+    "Light-control_settings": [
+        {
+            "autostart": true,
+            "bytes_per_pixel": 4,
+            "led_onboard": "LED",
+            "led_pin": 28,
+            "num_of_leds": 55
+        }
+    ],
+    "MQTT-config": [
+        {
+            "Alias": "device-alias(not used in this version)",
+            "Broker": "BROKER-IP",
+            "Client": "device-name",
+            "md_pin": "N/A",
+            "Port": 1883,
+            "PW": "MQTT-PW",
+            "User": "MQTT-USER"
+        }
+    ],
+    "Options": [
+        {
+            "BMP180": false,
+            "LightControl": true,
+            "MotionControl": false,
+            "MotionDetect": false,
+            "RelayControl": false
+        }
+    ],
+    "Wifi-config": [
+        {
+            "country": "DE",
+            "IP": null,
+            "PW": "YOUR PW",
+            "SSID": "FRITZBOX"
         }
     ]
-
 }

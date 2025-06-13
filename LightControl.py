@@ -15,10 +15,10 @@ def save_color(cache):
     status.save_param('status', 'color', cache)
 
 # Load configuration from config file
-settings    = config('config.json', 2)
-status      = config('status.json', 1)
+settings    = config('config.json', layers=2)
+status      = config('status.json', layers=1)
 cache       = status.get(param='color')
-led_pin     = settings.get('LightControl_settings', 'led_pin')
+led_pin     = settings.get('LightControl_settings','led_pin')
 pixel       = settings.get('LightControl_settings','num_of_leds')
 PixelByte   = settings.get('LightControl_settings','bytes_per_pixel')
 autostart   = settings.get('LightControl_settings','autostart')
@@ -30,10 +30,10 @@ led = Pin(led_pin, Pin.OUT, value=0)
 np  = NeoPixel(led, pixel, bpp=PixelByte) # bpp = bytes per pixel
 
 # Function to change LED-Pin -> name must be present in config.json!
-def set_led(pin='led_pin'):
+def change_led(pin='led_pin'):
     global np
     try:
-        led_pin = settings.light_control(pin)
+        led_pin = settings.get('LightControl_settings', pin)
         led     = Pin(led_pin, Pin.OUT, value=0)
         np      = NeoPixel(led, pixel, bpp=PixelByte)
         return 'success'
@@ -41,7 +41,10 @@ def set_led(pin='led_pin'):
         return 'Name not present in config file!'
 
 # Set all LEDs (Basic function)
-def static(color, level=1):
+def static(
+        color, 
+        level=1
+        ):
     global pixel, cache
     color=list(color)
     if len(color)<4:
@@ -54,6 +57,8 @@ def static(color, level=1):
             int(color[3]*level)
             )
     np.write()
+    cache=color
+    return cache
 
 # clear all pixels
 def clear():
@@ -62,7 +67,7 @@ def clear():
         np[i] = (0, 0, 0, 0)
     np.write()
 
-# Dim-Functions
+# Dim-Functions. You can create a level with the dim-class and run it with the .set()-function.
 class dim():
     def __init__(
         self, 
@@ -75,27 +80,34 @@ class dim():
         self.level  = level
         self.actual = self.level * 100
     
+    def set(self):
+        global level
+        self.actual = level * 100
         if self.target < self.actual:
             self.ramp_dn()
         elif self.target > self.actual:
             self.ramp_up()
+        else:
+            pass
         self.save()
 
     def ramp_up(self):
         global level, cache
-        actual = level * 100
-        while actual < self.target:
+        self.actual = level * 100
+
+        while self.actual < self.target:
             self.actual += 1
-            level = actual/100
+            level = self.actual/100
             static(cache, (level))
             time.sleep_ms(self.speed)
 
     def ramp_dn(self):
         global level, cache
-        actual = level * 100
-        while actual > self.target:
+        self.actual = level * 100
+        
+        while self.actual > self.target:
             self.actual -= 1
-            level = actual/100
+            level = self.actual/100
             static(cache, (level))
             time.sleep_ms(self.speed)
 
@@ -103,7 +115,10 @@ class dim():
         status.save_param(param='dim_status', data=self.target)
 
 # set color to a single pixel
-def single(colour, segment):
+def single(
+        colour, 
+        segment
+        ):
     global cache
     colour=list(colour)
     if len(colour)<4:
@@ -117,7 +132,13 @@ def single(colour, segment):
     np.write()
 
 # Set color with line-animation
-def line(color, speed=5, dir=0, gap=1, start=0):
+def line(
+        color, 
+        speed=5, 
+        dir=0, 
+        gap=1, 
+        start=0
+        ):
     global pixel, cache
     speed = int(speed)
     line = start
@@ -150,9 +171,9 @@ def line(color, speed=5, dir=0, gap=1, start=0):
     status.save_param(param='color', data=cache)
     return cache
 
-# Load the last known status
+# Load the last saved light-level
 if autostart == True:
     dim_status = status.get(param='dim_status')
-    lvl=dim(dim_status)
-    lvl.set()
+    last_saved = dim(dim_status)
+    last_saved.set()
 

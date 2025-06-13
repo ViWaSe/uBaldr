@@ -1,7 +1,10 @@
 # Simple script to start the Device
-Version = '4.1'
+Version = '5.1.1'
 
-# start Light-Control in last known state
+import sys
+sys.path.insert(0, "./modules")
+
+# start Light-Control
 import LightControl
 
 print('PicoW LightControl Version', Version)
@@ -10,6 +13,7 @@ print('PicoW LightControl Version', Version)
 import PicoWifi as wlan
 wlan.connect()
 
+# Establish MQTT-Connection 
 import PicoClient as MQTT
 print('>>> PicoClient is running!')
 MQTT.go()

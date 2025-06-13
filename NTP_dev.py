@@ -6,24 +6,21 @@ import machine, json
 import utime as time
 import usocket as socket
 import ustruct as struct
+from json_config_parser import config
 
-with open('time_setting.json') as f:
-    config = json.load(f)
-NTP_HOST=config['NTP_host']
-GMT_winter=config['GMT_winter']
-offline_time=config['offline_time']
+time_setting    = config('time_settin.json')
 
-def save_offline_time(tm):
-    config['offline_time'] = tm
-    with open('time_setting.json', 'w') as f:
-        json.dump(config, f)
+NTP_HOST        = time_setting.status('NTP_host')
+winter          = time_setting.status('use_winter_time')
+offline_time    = time_setting.status('offline_time')
+GMT_OFFSET      = time_setting.status('GMT_offset')
 
-
-# Winterzeit / Sommerzeit
-if GMT_winter == True:
-    GMT_OFFSET = 3600 * 1 # 3600 = 1 h (Winterzeit)
+# Winterzeit / Sommerzeit (This part is german since the "summer- and wintertime" is only used in germany)
+# GMT-offset = 1h (3600s), für Sommerzeit 2h (7200s)
+if winter == False:
+    GMT_OFFSET = GMT_OFFSET * 2 # (Winterzeit)
 else:
-    GMT_OFFSET = 3600 * 2 # 3600 = 1 h (Sommerzeit)
+    pass
 
 def getTimeNTP():
     NTP_DELTA = 2208988800

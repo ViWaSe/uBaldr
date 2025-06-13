@@ -1,0 +1,13 @@
+uBaldr version 5.1j
+Change Log
+
+# New Functions:
+> LightControl soft-setting on startup
+> new program structure
+> possibility to send and receive the config-file via MQTT
+
+# Changes from 4.1.2:
+> Changed the communication from Strings to JSON-String. This makes it more flexible and better to handle.
+	- i.E. set a color by line-animation: 
+		old: "line_255,0,0,0_5_rgbw"
+		new: "{"Type": "LC", "command": "line", "payload": [0,0,0,0], "speed": 5, "format": "rgbw"}"
