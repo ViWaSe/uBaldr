@@ -1,0 +1,40 @@
+{
+    "Wifi-config":
+    [
+        {
+        "wlanSSID":		    "",
+        "wlanPW":		    "",
+        "country":			"DE",
+        "Pico-IP":			null
+        }
+    ],
+
+    "MQTT-config":
+    [
+        {
+        "mqttBroker":		"192.168.178.121",
+        "mqttPort":			1883,
+        "mqttClient": 		"None",
+        "mqttUser":			"picow",
+        "mqttPW":			"loki",
+        "PiTopic":			"None",
+        "Alias":			"None"
+        }
+    ],
+
+    "Light-control_settings":
+    [
+        {
+        "led_anzahl":  		55,
+        "pixel_byte":		4,
+        "led_out_1": 		28,
+
+        "led_onboard": 		"LED",
+
+        "colour":			[0,0,0,0],
+        "dim_status":		100,
+        "start_power_on":	true
+        }
+    ]
+
+}
