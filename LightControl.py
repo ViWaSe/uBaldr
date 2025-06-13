@@ -1,25 +1,23 @@
-# LightControl
-# Supports WS2812B & SK2812 rgb + rgbw (adjust the "bytes_per_pixel" value in the config-file (3=rgb, 4=rgb+w))
-# neopixel-configuration is saved in config.json file
-# 05.12.2023 by vwall
+# LightControl by vwall
+# Supports WS2812B & SK2812 rgb + rgbw (change bpp/bites per pixel (3=rgb, 4=rgb+w))
+# Works only with rgb and rgbw format. Hex code is handled in the order module
+# This script uses the json_config_parser Module for configuration
+# NOTE: The "type: ignore" commtents are for the vs-code micropico extension only! The main reason is that the values from the JSON-File are unknown
+# NOTE: For WW/CW LEDs (24V): setting bpp = 3 is required (Byte 0=warm, 1=cold, 2=not used)
 
-Version='5.1j'
+Version='5.3.1'
 
 import utime as time
 from neopixel import NeoPixel
 from machine import Pin
 from json_config_parser import config
 
-# Save current status
-def save_color(cache):
-    status.save_param('status', 'color', cache)
-
 # Load configuration from config file
-settings    = config('config.json', layers=2)
-status      = config('status.json', layers=1)
+settings    = config('/params/config.json', layers=2)
+status      = config('/params/status.json', layers=1)
 cache       = status.get(param='color')
 led_pin     = settings.get('LightControl_settings','led_pin')
-pixel       = settings.get('LightControl_settings','num_of_leds')
+pixel       = settings.get('LightControl_settings','led_qty')
 PixelByte   = settings.get('LightControl_settings','bytes_per_pixel')
 autostart   = settings.get('LightControl_settings','autostart')
 
@@ -27,18 +25,47 @@ level       = 0
 
 # Initiate LED-Pin and Neo-Pixel settings
 led = Pin(led_pin, Pin.OUT, value=0)
-np  = NeoPixel(led, pixel, bpp=PixelByte) # bpp = bytes per pixel
+np  = NeoPixel(led, pixel, bpp=PixelByte) # bpp = bytes per pixel # type: ignore
 
-# Function to change LED-Pin -> name must be present in config.json!
-def change_led(pin='led_pin'):
-    global np
+# Admin-Functions: ----------------------------------------------------------------------------------------------------------
+
+# re-initiate the Pixel-value and set the dim-level again
+def re_initiate_pixel():
+    global pixel
+    pixel       = settings.get('LightControl_settings','led_qty')
+    dim_status  = status.get(param='dim_status')
+    dim(dim_status).set()
+
+# Change LED-Pin
+def set_led(new_device):
+    global np, status
+    device          = config(new_device, layers=1)
     try:
-        led_pin = settings.get('LightControl_settings', pin)
-        led     = Pin(led_pin, Pin.OUT, value=0)
-        np      = NeoPixel(led, pixel, bpp=PixelByte)
-        return 'success'
-    except:
-        return 'Name not present in config file!'
+        led_pin     = device.get(param='pin')
+        new_pixel   = device.get(param='pixel')
+        new_bpp     = device.get(param='bytes_per_pixel')
+        led         = Pin(led_pin, Pin.OUT, value=0)
+        np          = NeoPixel(led, new_pixel, bpp=new_bpp)  # type: ignore 
+        # create the status variable with the JSON-File of the new device
+        status      = config(new_device, layers=1)
+        return 'successfully changed led-pin'
+    except Exception as Argument:
+        return Argument
+
+# Restore default NeoPixel pin
+def set_led_to_default():
+    global led, np, status
+    led = Pin(led_pin, Pin.OUT, value=0)
+    np  = NeoPixel(led, pixel, bpp=PixelByte) # bpp = bytes per pixel # type: ignore
+    status      = config('status.json', layers=1)
+
+# Change LED-Quantity
+def set_led_qty(new_qty):
+    global settings
+    settings.save_param('LightControl_settings', 'led_qty', new_qty)
+
+# /Admin-Functions ----------------------------------------------------------------------------------------------------------
+
 
 # Set all LEDs (Basic function)
 def static(
@@ -49,8 +76,8 @@ def static(
     color=list(color)
     if len(color)<4:
         color.append(0)
-    for i in range (pixel):
-        np[i] = (
+    for i in range (pixel):     # type: ignore
+        np[i] = (               # type: ignore
             int(color[0]*level), 
             int(color[1]*level), 
             int(color[2]*level), 
@@ -63,11 +90,11 @@ def static(
 # clear all pixels
 def clear():
     global pixel
-    for i in range (pixel):
-        np[i] = (0, 0, 0, 0)
+    for i in range (pixel): # type: ignore 
+        np[i] = (0, 0, 0, 0) # type: ignore
     np.write()
 
-# Dim-Functions. You can create a level with the dim-class and run it with the .set()-function.
+# Dim-Functions. Run it with the .set()-function.
 class dim():
     def __init__(
         self, 
@@ -98,8 +125,11 @@ class dim():
         while self.actual < self.target:
             self.actual += 1
             level = self.actual/100
-            static(cache, (level))
-            time.sleep_ms(self.speed)
+            if self.actual <= 1:
+                static(cache, 0)
+            else:
+                static(cache, level)  # type: ignore
+                time.sleep_ms(self.speed)
 
     def ramp_dn(self):
         global level, cache
@@ -108,28 +138,41 @@ class dim():
         while self.actual > self.target:
             self.actual -= 1
             level = self.actual/100
-            static(cache, (level))
-            time.sleep_ms(self.speed)
+            if self.actual <= 1:
+                static(cache, 0)
+            else:
+                static(cache, level)  # type: ignore
+                time.sleep_ms(self.speed)
+    
+    def single(self):
+        # single(cache, self.target, self.segment)
+        pass 
 
     def save(self):
-        status.save_param(param='dim_status', data=self.target)
+        status.save_param(param='dim_status', new_value=self.target)
 
 # set color to a single pixel
 def single(
-        colour, 
-        segment
+        color,
+        light_level=level, 
+        segment=0
         ):
-    global cache
-    colour=list(colour)
-    if len(colour)<4:
-        colour.append(0)
-    np[segment] = (
-        int(colour[0]*level), 
-        int(colour[1]*level), 
-        int(colour[2]*level), 
-        int(colour[3]*level)
-        )
-    np.write()
+    if segment <= -1:
+        color = [0,0,0,0]
+    else:
+        color=list(color)
+    if len(color)<4:
+        color.append(0)
+    try:
+        np[segment] = ( # type: ignore # type: ignore
+            int(color[0]*light_level), 
+            int(color[1]*light_level), 
+            int(color[2]*light_level), 
+            int(color[3]*light_level)
+            )
+        np.write()
+    except:
+        pass
 
 # Set color with line-animation
 def line(
@@ -146,8 +189,8 @@ def line(
     if len(color)<4:
         color.append(0)
     if dir == 0:
-        while line < pixel:
-            np[line] = (
+        while line < pixel: # type: ignore
+            np[line] = ( # type: ignore
                 int(color[0]*level), 
                 int(color[1]*level), 
                 int(color[2]*level), 
@@ -158,7 +201,7 @@ def line(
             time.sleep_ms(speed)        
     elif dir == 1:
         while line > 0:
-            np[line] = (
+            np[line] = ( # type: ignore
                 int(color[0]*level), 
                 int(color[1]*level), 
                 int(color[2]*level), 
@@ -168,12 +211,35 @@ def line(
             np.write()
             time.sleep_ms(speed)
     cache = color
-    status.save_param(param='color', data=cache)
+    status.save_param(param='color', new_value=cache)
     return cache
+
+# Under Construction:
+def soft_swap(
+        color=(
+            0,
+            0,
+            0,
+            0
+            ), 
+        speed=5
+        ):
+    pass
+
+def on_off(flag):
+    saved = status.get(param='dim_status')
+    if flag == 0:
+        dim(0).set()
+        status.save_param(param='dim_status', new_value=saved)
+    elif flag == 1:
+        dim(saved).set()
 
 # Load the last saved light-level
 if autostart == True:
     dim_status = status.get(param='dim_status')
-    last_saved = dim(dim_status)
-    last_saved.set()
+    dim(dim_status).set()
 
+# Return actual light level
+def ret_dim():
+    level = status.get(param='dim_status')
+    return level

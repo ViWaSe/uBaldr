@@ -9,10 +9,21 @@ import machine
 import utime as time
 import usocket as socket
 import ustruct as struct
+from json_config_parser import config
+
+# Load time-settings from JSON
+time_setting    = config('/params/time_setting.json', layers=1)
+GMT_winter      = time_setting.get(param='use_winter_time') # type: ignore
+offline_time    = time_setting.get(param='offline_time') # type: ignore
+
+def save_time(time):
+    time_setting.save_param('offline_time', time)
 
 # Winterzeit / Sommerzeit
-#GMT_OFFSET = 3600 * 1 # 3600 = 1 h (Winterzeit)
-GMT_OFFSET = 3600 * 2 # 3600 = 1 h (Sommerzeit)
+if GMT_winter == True:
+    GMT_OFFSET = 3600 * 1 # 3600 = 1 h (Winterzeit)
+else:
+    GMT_OFFSET = 3600 * 2 # 3600 = 1 h (Sommerzeit)
 
 NTP_HOST = 'pool.ntp.org'
 
@@ -46,3 +57,7 @@ def timestamp():
     tm = machine.RTC().datetime()
     return str(tm[0])+'-'+str(tm[1])+'-'+str(tm[2])+'|'+str(tm[4])+':'+str(tm[5])+':'+str(tm[6])
 
+def getTimeRTC():
+    setTimeRTC()
+    tm = tm = machine.RTC().datetime()
+    return tm

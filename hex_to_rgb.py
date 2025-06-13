@@ -1,3 +1,6 @@
+# Hex to RGB 
+# Version 1.0
+
 def hex_to_rgb(hex):
     rgb = []
     for i in (0, 2, 4):

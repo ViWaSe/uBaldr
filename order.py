@@ -1,107 +1,123 @@
 # Smarthome Order-Modul by vwall
-# Processing json-strings
-# Fixed the mqtt-json-issue
-# Unfortunately it is not supported, to use the mqtt-string directly, so we must take a little detour with a temp-file
-Version = '5.1j'
+
+Version = '5.3'
 
 import LightControl as LC
+import switch
 import json
-from PicoWifi import Log
+from logger import Log
 
-# Create a class to process the incoming data (json-string):
 class proc(object):
     def __init__(
             self, 
-            data
-            ):
-        self.tmp = open('temp.json', 'w')
-        self.tmp.write(data)
-        self.tmp.close()
-        with open ('temp.json') as f:    
+            data='temp.json'
+            ):   
+        with open (data) as f:    
             self.data = json.load(f)
-        self.type = self.data['Type']
-        # print(self.data, self.type, self.data['command'], self.data['payload'])
+    
+    # Device_control:
+    def dev_control(self):
+        dev_name    = self.data['device']
+        command     = self.data['command']
+        payload     = self.data['payload']
 
-    # Sort the data by type and call the right program:     
-    def run(self):
-        pass
-        if self.type == 'admin':
-            self.admin()
-        elif self.type == 'LC':
-            self.LC()
-        elif self.type == 'relay':
-            self.relay()
-        elif self.type == 'motor':
-            self.motor()
+        if command == 'switch':
+            switch.on_off(dev_name, payload)
+        elif command == 'timer':
+            switch.timer(dev_name, int(payload))
+        elif command == 'pin':
+            pin = self.data('pin')
+            switch.pin_control(pin, payload)
         else:
             pass
-        return 'ready'
     
-    # Light control: process the data and call the Light control program with the command, payload and speed:
+    # Light control function:
     def LC(self):
-        command 	= self.data['command']
-        payload 	= self.data['payload']
-        speed   	= self.data['speed']
-        c_format 	= self.data['format']
+        command 	    = self.data['command']
+        payload 	    = self.data['payload']
+        speed   	    = self.data['speed']
+        color_format 	= self.data['format']
 
-        if c_format == 'hex':
+        if color_format == 'hex':
             from hex_to_rgb import hex_to_rgb
             color = hex_to_rgb(str(payload))
         else:
             color = payload
         
-        # Set the device if device is specified in the string (name must be present in config.json. Otherwise it will use the standard led_pin variable or the last used led-device)
-        # The order is logged in the Pico.log file
+        # Change the LED-Pin if set in order string:
         try:
-            LC.change_led(self.data['device'])
-            Log(
-                'New LC-order - command: ' + command + 
-                ' | payload: ' + str(payload) + 
-                ' | speed: ' + str(speed) + 
-                ' | device: ' + self.data['device']
-                )
+            LC.set_led(new_device=self.data['device']) 
         except:
-            Log(
-                'New LC-order - command: ' + command + 
-                ' | payload: ' + str(payload) + 
-                ' | speed: ' + str(speed))
+            pass
         
-        # Sort by command and run Light-control. Currently only 2 types of commands (line and dim).
+        # Run the command in LightControl
         if command == 'dim':
             LC.dim(payload, speed).set()
         elif command == 'line':
             LC.line(color, speed)
+        elif command == 'on_off':
+            LC.on_off(payload)
+        elif command == 'get_lvl':
+            level = LC.ret_dim()
+            return level
         else:
-            return 'Command not found'
-        Log('fin')
+            return 'LC: Command not found'
+        Log('Order', '[ INFO ]: ' + str(command))
+        return True
     
-    # Some admin-functions, can be extended
+    # admin-functions
     def admin(self):
         if self.data['command'] == 'echo':
             return 'alive'
+        
         elif self.data['command'] == 'offline':
-            Log('Broker is offline')
-            return 'lost'
-        elif self.data['command'] == 'conf':
-            return 'send_config'
+            Log('MQTT', '[ INFO ]: Broker is offline. Probably shutdown.')
+            return 'conn_lost'
+        
+        elif self.data['command'] == 'get_conf':
+            from PicoClient import send_json as send
+            send('config.json')
+        
+        elif self.data['command'] == 'get_version':
+            from PicoClient import Version
+            if self.data['payload'] == 'all':
+                return Version
+            else:
+                ver = self.data['payload']
+                return Version[ver]
+        
+        elif self.data['command'] == 'change_qty':
+            LC.set_led_qty(self.data['new'])
+            LC.re_initiate_pixel()
+            Log('LC', '[ INFO ]: LED-Qty changed to '+str(self.data['new']))
+            return 'OK'
+
+        elif self.data['command'] == 'get_qty':
+            qty = LC.pixel
+            return qty            
+        
         else:
             pass
-    
-    # Under construction / not used
-    def relay(self):
-        pass
 
-    def motor(self):
-        pass
-        
+# Order-processing function
+def run(json_string):
+
+    # Create a tmp.json file from incoming string
+    tmp = open('temp.json', 'w')
+    tmp.write(json_string)
+    tmp.close()
+    
+    with open ('temp.json') as f:    
+        data = json.load(f)
+    order = data['Type']  
+    order_instance = proc()
+    try:
+        call = getattr(order_instance, order)()
+        return call
+    except:
+        return 'Command is not found. Check your input!'
     
 
 # Beispiele:
 LC_string       = '{"Type": "LC", "device": "led_pin", "command": "line", "payload": [0,0,0,0], "speed": 5, "format": "rgbw"}'
-LC_string       = '{"Type": "LC", "command": "line", "payload": [0,0,0,0], "speed": 5, "format": "rgbw"}'
-LC_string       = '{"Type": "LC", "command": "line", "payload": "FF0000", "speed": 5, "format": "hex"}'
-admin_string    = '{"Type": "admin", "command": "echo"}'
-Bsp_string1     = '{"Type": "relay", "device": "R1", "command": "on"}'
-Bsp_string1     = '{"Type": "motor", "device": "M1", "command": "move", "target": 2000, "speed": 5, "EOF": 1800, "EOS": 2000}'
 
-LC_string       ='{"Type": "LC", "start": <FIRST SEGMENT>, "end": <LAST SEGMENT>, "animation": <None, "line", "swap", "dim">, "payload": <LIST (4x 0-255) OR NUMBER (0-100) OR HEX-CODE>, "speed": 5}'

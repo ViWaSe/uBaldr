@@ -1,0 +1,9 @@
+{
+    "dev_1":[
+        {
+            "Pin": 14,
+            "Type": "PULL_DOWN",
+            "IN_OUT": "OUT"
+        }
+    ]
+}
