@@ -3,9 +3,13 @@
 from umqtt_simple import MQTTClient
 from logger import Log
 import utime as time
-from typing import Optional
 
-version = '1.2.2'
+try:
+    from typing import Optional, Any
+except ImportError:
+    Optional = Any = object
+
+version = '1.2.3'
 
 class MQTTHandler:
     def __init__(
@@ -20,7 +24,7 @@ class MQTTHandler:
         self.broker = broker
         self.user = user
         self.password = password
-        self.client: Optional[MQTTClient] = None
+        self.client: Optional[MQTTClient] = None # type: ignore
         self.subscribed_topic = None
 
     # Establish MQTT-Connection

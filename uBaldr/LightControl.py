@@ -5,14 +5,18 @@
 # NOTE: The "type: ignore" commtents are for the vs-code micropico extension only! The main reason is that the values from the JSON-File are unknown
 # NOTE: For WW/CW LEDs (24V): setting bpp = 3 is required (Byte 0=warm, 1=cold, 2=not used)
 
-version='6.0.4'
+version='6.0.5'
 
 import utime as time
 from neopixel import NeoPixel
 from machine import Pin
 from json_config_parser import config
-from typing import Any
 from PicoWifi import Log
+
+try:
+    from typing import Any
+except ImportError:
+    Any = object
 
 class LightControl:
     def __init__(self, config_file='/params/config.json', status_file='/params/status.json'):
@@ -35,7 +39,7 @@ class LightControl:
 
         self.level = 0
         self.led = Pin(self.led_pin, Pin.OUT, value=0)
-        self.np: Any = NeoPixel(self.led, self.pixel, bpp=self.bpp)
+        self.np: Any = NeoPixel(self.led, self.pixel, bpp=self.bpp) # type: ignore # type
 
         if self.autostart:
             self.set_dim(self.dim_status)
