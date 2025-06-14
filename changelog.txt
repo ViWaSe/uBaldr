@@ -1,4 +1,4 @@
-# uBaldr Version 6.1.1
+# uBaldr Version 6.3.4
 
 - changelog -
 
@@ -13,3 +13,4 @@
 	- The client sends an “echo” to the /status topic and waits for the response with wait_msg(). The program is paused until it receives a response from the broker.
 	- It does not matter what is in the answer string. It continues when a message is received on the /order-topic. Will maybe improve this function later…
 > In some cases Baldr was not able to connect to WiFi. You then had to power-cycle the device and it (usually) worked. The reason was that the wifi-chip was not yet ready when the Connection started. This has been fixed.
+> Fixed the issue with importing typing module. The typing module is not supported in micropython. The reason for using typing was to avoid false error-messages in VS-Code  - Added #type:ignore comment on this lines as a workaround.
