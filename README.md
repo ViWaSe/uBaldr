@@ -36,4 +36,21 @@ Change the config.json and fill in your wifi-settings and MQTT-settings before s
 I tried my best to write a documentation on how to use the project.
 Please let me know if you have questions / improvement-suggestions or found bugs. 
 
+# OTA-Update
+To trigger an OTA-Update, send this JSON-String to the device/order Topic. The String will be updated with every new release:
+>{
+  "sub_type": "admin",
+  "command": "get_update",
+  "module": [
+    "main.py",
+    "LightControl.py",
+    "PicoClient.py",
+    "PicoWifi.py",
+    "mqtt_handler.py",
+    "order.py",
+    "logger.py"
+  ],
+  "base_url": "https://raw.githubusercontent.com/ViWaSe/uBaldr/23f1a65849bd52473a034db57b25b3bd1d537e0f/uBaldr/"
+}
+
 Hope you enjoy my first project!
