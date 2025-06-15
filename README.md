@@ -3,13 +3,13 @@ This is a Micropython Smarthome / IoT-project using Raspberry PicoW or ESP-32 mi
 
 # Purpose
 You can use this project to control Neopixel-LEDs via the MQTT-Protocoll. A MQTT-Broker is needed to run the project and can i.E. be realized by a Raspberry Pi.
-JSON-Strings are used for communication (version >= 5.1j). Please see documentation pdf for more info!
+JSON-Strings are used for communication. Please see documentation pdf for more info!
 
 # Features
 - Set Color by line-animation (pixel by pixel) with defined speed. Supported formats: hex, [r,g,b] and [r,g,b,w]
 - Dim light with defined speed
-- OTA-Updates (Will provide an extra repo for that function)
-- Change settings via MQTT
+- OTA-Updates
+- Change settings via MQTT-Message
 - Log-function
 - NTP
 
@@ -21,11 +21,11 @@ JSON-Strings are used for communication (version >= 5.1j). Please see documentat
 The Project works with 2 MQTT-Topics. device/order ist the order you send to the client. Messages from the client are published to device/status.
   - Example 1 - Set the color of your LED-Strip to rgb-red (255,0,0) by line-animation. You can set a speed (pause between pixels in ms).
     - JSON-String to device/order:
-    > {"type": "LC", "command": "line", "payload": [255,0,0], "format": "rgb", "speed": 5}
+    > {"sub_type": "LC", "command": "line", "payload": [255,0,0], "format": "rgb", "speed": 5}
     - Answer from device/status: True
   - Example 2 - dim the light to 5% with 1ms between %-steps
     - JSON-String:
-    > {"type": "LC", "command": "dim", "payload": 5, "speed": 1}
+    > {"sub_type": "LC", "command": "dim", "payload": 5, "speed": 1}
     - Answer from device/status: True
 
 # Micropython-Files
