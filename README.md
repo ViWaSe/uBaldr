@@ -33,8 +33,7 @@ You find everything you need to copy to your µPython-device in the uBaldr-Folde
 Change the config.json and fill in your wifi-settings and MQTT-settings before start!
 
 # Documentaion
-I tried my best to write a documentation on how to use the project.
-Please let me know if you have questions / improvement-suggestions or found bugs. 
+I will add a full manual to the first stable release.
 
 # OTA-Update
 To trigger an OTA-Update, send this JSON-String to the device/order Topic:
