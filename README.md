@@ -37,7 +37,7 @@ I tried my best to write a documentation on how to use the project.
 Please let me know if you have questions / improvement-suggestions or found bugs. 
 
 # OTA-Update
-To trigger an OTA-Update, send this JSON-String to the device/order Topic. The String will be updated with every new release:
+To trigger an OTA-Update, send this JSON-String to the device/order Topic:
 >{
   "sub_type": "admin",
   "command": "get_update",
