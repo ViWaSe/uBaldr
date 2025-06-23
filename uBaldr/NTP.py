@@ -1,6 +1,6 @@
 # Time setting via NTP-Server
 
-Version = '1.1'
+Version = '1.1.2'
 
 import machine
 import utime as time
@@ -37,7 +37,14 @@ def getTimeNTP():
     finally:
         s.close()
     ntp_time = struct.unpack("!I", msg[40:44])[0]
-    return time.gmtime(ntp_time - NTP_DELTA + GMT_OFFSET)
+    
+    t = time.gmtime(ntp_time - NTP_DELTA + GMT_OFFSET)
+    year = t [0]
+    if year >= 2055:
+        year -=30
+    actual_time = (year,) + t[1:]
+
+    return actual_time
 
 def setTimeRTC():
     tm = getTimeNTP()

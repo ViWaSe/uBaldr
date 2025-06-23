@@ -1,10 +1,10 @@
 # Smarthome Order-Modul by vwall
 
-version = '6.3.2'
+version = '6.4.1'
 
 import json
 from LightControl import LC as LightControl
-from logger import Log
+from logger import Log, get_log
 from hex_to_rgb import hex_to_rgb
 
 class Proc:
@@ -13,37 +13,54 @@ class Proc:
             raise ValueError("Data error.")
         self.data = data
     
+    def make_result(
+            self,
+            msg,
+            is_error=False,
+            origin='Unknown'
+    ):
+        return {"msg": msg, "is_err_msg": is_error, "origin": origin}
+    
     # LightControl-functions
     def LC(self):
         command = self.data['command']
         payload = self.data['payload']
-        speed   = self.data['speed']
-        if 'new_value' in self.data:
-            new_value = self.data['new_value']
-        if 'pixel' in self.data:
-            pixel = self.data['pixel']
-        if 'format' in self.data:
-            color_format = self.data['format']
-            if color_format == 'hex':
-                color = hex_to_rgb(str(payload)) if color_format == 'hex' else payload
-            else:
-                color = payload
+
+        if 'dir' in self.data:
+            dir = self.data['dir']
+        else:
+            dir=0
+        
+        if isinstance(payload, list):
+            color = payload
+        if isinstance(payload, str):
+            try:
+                color = hex_to_rgb(str(payload))
+            except ValueError:
+                return self.make_result('Failed! Payload is not list or hex!', is_error=True, origin='LC')
+        
+        if 'speed' in self.data:
+            speed   = self.data['speed']
+        else:
+            speed = 5
+        
+        if 'steps' in self.data:
+            steps = self.data['steps']
+        else:
+            steps = 50
 
         command_map = {
             'dim': lambda: LightControl.set_dim(payload, speed),
-            'line': lambda: LightControl.line(color, speed),
-            'change_autostart': lambda: LightControl.change_autostart(new_value),
-            'change_pixel_qty': lambda: LightControl.change_pixel_qty(new_value),
-            'single': lambda: LightControl.single(color=payload, segment=pixel) 
+            'line': lambda: LightControl.line(color, speed, dir),
+            'smooth': lambda: LightControl.set_smooth(color, speed, steps) 
         }
         
         if command in command_map:
             command_map[command]()
-            # Log('Order', f'[ INFO  ]: Order sucessful. Command = {command}')
-            return True
+            return self.make_result(msg=True, is_error=False, origin='LC')
         else:
             Log('Order', f'[ INFO  ]: Command not found. Command = {command}')
-            return 'LC: Command not found'
+            return self.make_result(msg='Command not found!', is_error=True, origin='LC')
 
     # Admin-Functions
     def admin(self):
@@ -66,11 +83,20 @@ class Proc:
             'set_GMT_offset': lambda: self.change_GMT_time(new_value),
             'get_timestamp': lambda: self.get_timestamp(),
             'reboot': lambda: self.reboot(),
-            'get_sysinfo': lambda: self.get_sysinfo()
+            'get_sysinfo': lambda: self.get_sysinfo(),
+            'onboard_led_active': lambda: self.onboard_led_active(new_value),
+            'publish_in_json': lambda: self.pinjson(new_value)
         }
         
-        return command_map.get(command, lambda: 'Command not found')()
+        return command_map.get(command, lambda: self.make_result(msg=f'Command not found: {command}', is_error=True, origin="command_handler"))()
     
+    def pinjson(self, value: bool):
+        from PicoClient import settings, publish_in_Json
+        if publish_in_Json != value:
+            settings.save_param(group='MQTT-config', param='publish_in_json', new_value=value)
+            publish_in_Json = value
+        return self.make_result(msg='Setting changed and takes effect after reboot.', is_error=False, origin='admin')
+
     # Log when Broker is offfline
     def handle_offline(self):
         Log('MQTT', '[ INFO  ]: Broker is offline under normal conditions')
@@ -79,24 +105,23 @@ class Proc:
     def get_sysinfo(self):
         import sys
         platform = sys.platform
-        return f'Platform: {platform}'
+        return self.make_result(msg=f'Platform: {platform}', is_error=False, origin='admin')
 
     # Reboot-request
     def reboot(self):
-        try: 
-            pw = self.data['password']
-        except:
-            return 'No password in JSON. Try >loki<!'
-        if pw == 'loki':
-            import machine
-            machine.reset()
-        else:
-            return 'Wrong password. Try >loki<!'
+        Log('Order', '[ INFO  ]: Reboot requested. Will now call a machine.reset()')
+        import machine
+        machine.reset()
+    
+    def onboard_led_active(self, new_state):
+        from PicoWifi import led_onboard
+        led_onboard.set_active(new_state)
+        return self.make_result(msg=f'onboard_led active: {new_state}', is_error=False, origin='admin')
     
     # Get Timestamp from NTP-Module
     def get_timestamp(self):
         from NTP import timestamp
-        return timestamp()
+        return self.make_result(msg=timestamp(), is_error=False, origin='admin/NTP')
     
     # Change NTP-Settings (Wintertime and GMT-Osffset)
     def change_GMT_time(
@@ -113,19 +138,19 @@ class Proc:
         if winter != use_winter_time:
             time_setting.save_param(param='use_winter_time', new_value=winter)
             Log('NTP', f'[ INFO  ]: Changed Wintertime to {winter}')
-            return f'set wintertime to {winter}. Changes will take affect after reboot'
+            return self.make_result(msg=f'set wintertime to {winter}. Changes will take effect after reboot', is_error=False, origin='admin/NTP')
         
         if GMT_adjust != GMT_offset:
             time_setting.save_param('GMT_offset', GMT_adjust)
             Log('NTP', f'[ INFO  ]: Adjusted GMT-Offset to {GMT_adjust}')
-            return f'set GMT-Offset to {GMT_adjust}. Changes will take affect after reboot'
+            return self.make_result(msg=f'set GMT-Offset to {GMT_adjust}. Changes will take effect after reboot', is_error=False, origin='admin/NTP')
 
     def get_version(self):
         import versions
         if self.data['sub_system'] == 'all':
-            return versions.all()
+            return self.make_result(msg=versions.all(), is_error=False, origin='admin')
         else:
-            return versions.by_module(self.data['sub_system']) # type: ignore
+            return self.make_result(msg=versions.by_module(self.data['sub_system']), is_error=False, origin='admin') 
 
     # Change LED-quantity
     def change_led_qty(self, new_value):
@@ -136,20 +161,15 @@ class Proc:
         LightControl.change_autostart(new_value)
 
     def get_log(self):
-        sub = self.data['logfile']
-        try:
-            with open(f'{sub}.log', 'r') as f:
-                cont = f.read()
-                if not cont:
-                    return 'Logfile is empty!'
-                return cont
-        except Exception as e:
-            return f'Error reading Logfile: {e}'
+        sub = self.data['subsystem']
+        logs = get_log(sub)
+        return self.make_result(msg=logs, is_error=False, origin='admin')
 
 # Run a JSON-String
 def run(json_string):
     try:
         data = json.loads(json_string)
+        order_instance = Proc(data)
 
         # Get the Order-Type from JSON
         if 'sub_type' in data:
@@ -157,16 +177,15 @@ def run(json_string):
         else:
             order = data['Type']
         
-        order_instance = Proc(data)
         call = getattr(order_instance, order)()
         return call
     except KeyError as e:
         Log('Order', f'[ ERROR ]: Key-Error / Key not found - {e}')
-        return f"Key not found: {e}"
+        return order_instance.make_result(msg=f"Key not found: {e}", is_error=True, origin='order_processing')
     except AttributeError:
         Log('Order', f'[ ERROR ]: The sub-type >{order}< is not a known instance')
-        return 'Command not found. Check your input!'
+        return order_instance.make_result(msg=f"Command not found!", is_error=True, origin='order_processing')
     except Exception as e:
         Log('Order', f'[ ERROR ]: Unknown Error - {e}')
-        return f"Unknown Error: {e}"
+        return order_instance.make_result(msg=f"Unknown Error: {e}", is_error=True, origin='order_processing')
 

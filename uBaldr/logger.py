@@ -34,5 +34,9 @@ def Log(
 
 # return logfile content 
 def get_log(sub, dir='/log'):
-    sub_file = dir + sub + '.log'
-    return sub_file
+    try:
+        with open(f'/{dir}/{sub}.log', 'r') as f:
+            content = f.read()
+        return content
+    except FileNotFoundError:
+        return 'Extraction fof logs failed! File not found!'
