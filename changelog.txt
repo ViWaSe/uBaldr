@@ -1,16 +1,36 @@
-# uBaldr Version 6.3.4
+# uBaldr Version 6.4
 
 - changelog -
 
 # New Functions:
-> Added ESP-32 Support
-	- Added 2 new items to config.json, "onboard_led" and "led_inverted" as the onboard_led is usually pin21 and also the value is inverted on ESP32-3
+> Added Setting to turn off the onboard-led.
+	- New Item in config.json "led_active" -> boolean value
+	- New Admin-command "onboard_led_active" -> boolean value
+	- Re-designed the onboard-led-handling and moved all functions to a new module
+> Added new LightControl-Features:
+	- "smooth": Change the color at all pixels with a "soft" color transition. You can define a customized speed (default is 5ms) and set steps (default is 50)
+	- Added the "dir"-parameter for color-setting "line" in the order-module. Line can now set forward and backward.
+> Additional changes in LightControl.py:
+	- Changed the list-apend-function. If now a list with i.E. only 2 objects is given, it will allways append until it has 4 objects. That means, that also a color is set, if you only have 1 or 2 objects in the list (i.E. [255, 50] -> [255,50,0,0])
+> Changes in order.py for sub_type "LC":
+	- The "speed"-paameter is not needed anymore. If no speed is set in the JSON-String, the default value (5ms) is used.
+	- The "format"-parameter for "line" or "smooth" is not needed anymore. Order detects automatically the type of the payload. If there is an Error (i.E. type is string, but not hex) it will return that the order has failed.
+	-> This makes the "LC"-Order much simplier. All you need now is "command" and "payload" to set a color or dim the lights!
+> Improved the OTA-Update-function. If "module_name" in the order-JSON is "all", all modules are updated automatically. No need to send a list of all modules.
+
+> Added possibility to publish in JSON for better handling and more possibility. All results from the functions are now returned as dict. 
+	- If "publish_in_json" is "True", all messages are published in JSON-String. Example: {"msg": True, "is_err_msg": False, "origin": "LC"}
+	- The function can be activated by sending the admin-command {"sub_type": "admin", "command": "publish_in_json", "new_value": True} and is then active after reboot.
+	- With this change you can now filter your message by error or status-message
+
+> New admin-functions: "publish_in_json": True/False (experimental, not yet finished), "onboard_led_active": True/False
+
+Removed functions:
+> Removed the need of an reboot-password
 
 # Bugfixes:
-> Corrected problem with wrong configured command-map in order.py
-> Watchdog was not working proberly and lost network Connection was not detected every time. Also the reconnect to the MQTT-Broker did not work. This has been fixed
-> Changed the network-check-function. Before it was a ping to the Google-DNS. Now it is more simplified:
-	- The client sends an “echo” to the /status topic and waits for the response with wait_msg(). The program is paused until it receives a response from the broker.
-	- It does not matter what is in the answer string. It continues when a message is received on the /order-topic. Will maybe improve this function later…
-> In some cases Baldr was not able to connect to WiFi. You then had to power-cycle the device and it (usually) worked. The reason was that the wifi-chip was not yet ready when the Connection started. This has been fixed.
-> Fixed the issue with importing typing module. The typing module is not supported in micropython. The reason for using typing was to avoid false error-messages in VS-Code  - Added #type:ignore comment on this lines as a workaround.
+> Improved Watchdog with Timeout:
+	- When watchdog checked the MQTT-connection, it simply published a message and waited for answer. However if there was no answer, the code stopped and waited for ever. No error or reconnect!
+		-> Changed watchdog so, that it now asks 5 times for answer. If there is no answer, it tries to reconnect. The error is then logged to Watchdog.log
+> Problem with NTP-Timestamp:
+	- If a ESP-32-S3 was used, the NTP-Timestamp was in year 2055. This was caused by an known bug in the firmware. Fixed the issue by adding a date validation.
