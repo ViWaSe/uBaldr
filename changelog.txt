@@ -23,7 +23,7 @@
 	- The function can be activated by sending the admin-command {"sub_type": "admin", "command": "publish_in_json", "new_value": True} and is then active after reboot.
 	- With this change you can now filter your message by error or status-message
 
-> New admin-functions: "publish_in_json": True/False (experimental, not yet finished), "onboard_led_active": True/False
+> New admin-functions: "publish_in_json": True/False (not fully tested yet), "onboard_led_active": True/False
 
 Removed functions:
 > Removed the need of an reboot-password
