@@ -3,13 +3,13 @@ This is a Micropython Smarthome / IoT-project using Raspberry PicoW or ESP-32 mi
 
 # Purpose
 You can use this project to control Neopixel-LEDs via the MQTT-Protocoll. A MQTT-Broker is needed to run the project and can i.E. be realized by a Raspberry Pi.
-JSON-Strings are used for communication (version >= 5.1j). Please see documentation pdf for more info!
+JSON-Strings are used for communication. Please see documentation pdf for more info!
 
 # Features
 - Set Color by line-animation (pixel by pixel) with defined speed. Supported formats: hex, [r,g,b] and [r,g,b,w]
 - Dim light with defined speed
-- OTA-Updates (Will provide an extra repo for that function)
-- Change settings via MQTT
+- OTA-Updates
+- Change settings via MQTT-Message
 - Log-function
 - NTP
 
@@ -21,11 +21,11 @@ JSON-Strings are used for communication (version >= 5.1j). Please see documentat
 The Project works with 2 MQTT-Topics. device/order ist the order you send to the client. Messages from the client are published to device/status.
   - Example 1 - Set the color of your LED-Strip to rgb-red (255,0,0) by line-animation. You can set a speed (pause between pixels in ms).
     - JSON-String to device/order:
-    > {"type": "LC", "command": "line", "payload": [255,0,0], "format": "rgb", "speed": 5}
+    > {"sub_type": "LC", "command": "line", "payload": [255,0,0], "format": "rgb", "speed": 5}
     - Answer from device/status: True
   - Example 2 - dim the light to 5% with 1ms between %-steps
     - JSON-String:
-    > {"type": "LC", "command": "dim", "payload": 5, "speed": 1}
+    > {"sub_type": "LC", "command": "dim", "payload": 5, "speed": 1}
     - Answer from device/status: True
 
 # Micropython-Files
@@ -33,7 +33,23 @@ You find everything you need to copy to your µPython-device in the uBaldr-Folde
 Change the config.json and fill in your wifi-settings and MQTT-settings before start!
 
 # Documentaion
-I tried my best to write a documentation on how to use the project.
-Please let me know if you have questions / improvement-suggestions or found bugs. 
+I will add a full manual to the first stable release.
+
+# OTA-Update
+To trigger an OTA-Update, send this JSON-String to the device/order Topic:
+>{
+  "sub_type": "admin",
+  "command": "get_update",
+  "module": [
+    "main.py",
+    "LightControl.py",
+    "PicoClient.py",
+    "PicoWifi.py",
+    "mqtt_handler.py",
+    "order.py",
+    "logger.py"
+  ],
+  "base_url": "https://raw.githubusercontent.com/ViWaSe/uBaldr/23f1a65849bd52473a034db57b25b3bd1d537e0f/uBaldr/"
+}
 
 Hope you enjoy my first project!
