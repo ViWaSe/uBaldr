@@ -34,3 +34,4 @@ Removed functions:
 		-> Changed watchdog so, that it now asks 5 times for answer with check_msg(). If there is no answer, it tries to reconnect. The error is then logged to Watchdog.log
 > Problem with NTP-Timestamp:
 	- If a ESP-32-S3 was used, the NTP-Timestamp was in year 2055. This was caused by an known bug in the firmware. Fixed the issue by adding a date validation.
+ 
