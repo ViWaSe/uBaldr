@@ -7,6 +7,7 @@ JSON-Strings are used for communication. Please see documentation pdf for more i
 
 # Features
 - Set Color by line-animation (pixel by pixel) with defined speed. Supported formats: hex, [r,g,b] and [r,g,b,w]
+- Set Color by smooth animantion (all pixel at same time). Parametere are the same as by line-animation
 - Dim light with defined speed
 - OTA-Updates
 - Change settings via MQTT-Message
