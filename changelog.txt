@@ -30,7 +30,7 @@ Removed functions:
 
 # Bugfixes:
 > Improved Watchdog with Timeout:
-	- When watchdog checked the MQTT-connection, it simply published a message and waited for answer. However if there was no answer, the code stopped and waited for ever. No error or reconnect!
-		-> Changed watchdog so, that it now asks 5 times for answer. If there is no answer, it tries to reconnect. The error is then logged to Watchdog.log
+	- When watchdog checked the MQTT-connection, it simply published a message and waited for answer with the wait_msg()-method. However if there was no answer, the code stopped and waited for ever. No error or reconnect!
+		-> Changed watchdog so, that it now asks 5 times for answer with check_msg(). If there is no answer, it tries to reconnect. The error is then logged to Watchdog.log
 > Problem with NTP-Timestamp:
 	- If a ESP-32-S3 was used, the NTP-Timestamp was in year 2055. This was caused by an known bug in the firmware. Fixed the issue by adding a date validation.
