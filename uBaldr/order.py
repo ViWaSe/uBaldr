@@ -37,7 +37,7 @@ class Proc:
             try:
                 color = hex_to_rgb(str(payload))
             except ValueError:
-                return self.make_result('Failed! Payload is not list or hex!', is_error=True, origin='LC')
+                return self.make_result('Failed! Payload is not list or hex!', is_error=True, origin='LightControl')
         
         if 'speed' in self.data:
             speed   = self.data['speed']
@@ -57,10 +57,10 @@ class Proc:
         
         if command in command_map:
             command_map[command]()
-            return self.make_result(msg=True, is_error=False, origin='LC')
+            return self.make_result(msg=True, is_error=False, origin='LightControl')
         else:
             Log('Order', f'[ INFO  ]: Command not found. Command = {command}')
-            return self.make_result(msg='Command not found!', is_error=True, origin='LC')
+            return self.make_result(msg='Command not found!', is_error=True, origin='LightControl')
 
     # Admin-Functions
     def admin(self):
