@@ -1,6 +1,6 @@
 # Smarthome Order-Modul by vwall
 
-version = '6.4.1'
+version = '6.4.2'
 
 import json
 from LightControl import LC as LightControl
@@ -71,8 +71,7 @@ class Proc:
             new_value = self.data['new_value']
 
         command_map = {
-            'echo': lambda: 'Pico_alive',
-            'alive': lambda: 'OK',
+            'echo': lambda: self.echo(),
             'offline': lambda: self.handle_offline(),
             'get_version': lambda: self.get_version(),
             'change_led_qty': lambda: self.change_led_qty(new_value),
@@ -89,6 +88,9 @@ class Proc:
         }
         
         return command_map.get(command, lambda: self.make_result(msg=f'Command not found: {command}', is_error=True, origin="command_handler"))()
+    
+    def echo(self):
+        return self.make_result(msg='alive', origin='admin')
     
     def pinjson(self, value: bool):
         from PicoClient import settings, publish_in_Json
@@ -116,7 +118,7 @@ class Proc:
     def onboard_led_active(self, new_state):
         from PicoWifi import led_onboard
         led_onboard.set_active(new_state)
-        return self.make_result(msg=f'onboard_led active: {new_state}', is_error=False, origin='admin')
+        return self.make_result(msg=f'onboard_led active setting -> {new_state}', is_error=False, origin='admin')
     
     # Get Timestamp from NTP-Module
     def get_timestamp(self):
@@ -155,10 +157,12 @@ class Proc:
     # Change LED-quantity
     def change_led_qty(self, new_value):
         LightControl.change_pixel_qty(new_value)
+        return self.make_result(msg=f'NeoPixel Quantity changed to {new_value}', origin='LightControl')
     
     # Change Autostart-setting
     def change_autostart_setting(self, new_value):
         LightControl.change_autostart(new_value)
+        return self.make_result(msg=f'NeoPixel Autostart changed to {new_value}', origin='LightControl')
 
     def get_log(self):
         sub = self.data['subsystem']
