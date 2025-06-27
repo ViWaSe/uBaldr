@@ -4,7 +4,7 @@
 # The incoming orders are processed and executed by order.py and the answer is published to the status-topic
 # Settings stored in config.json
 
-version = '6.4.1'
+version = '6.4.1a'
 
 import utime as time
 from mqtt_handler import MQTTHandler
@@ -27,7 +27,7 @@ except KeyError:
 
 # Set the LED-Timer depending on the platform (pico or not)
 if is_pico:
-    led_timer=800
+    led_timer=600
 else:
     led_timer=400
 
@@ -67,9 +67,6 @@ def watchdog(
 
         if wd_counter % 2 == 0:
             Log('Watchdog', '[ CHECK ]: Very quiet here. Checking connection...')
-            if not check_status():
-                Log('Watchdog', '[ FAIL ]: No Connection to Wifi. See Wifi.log for details!')
-                return False
             
             mqtt.publish(f'{mqttClient}/status', {"msg": "echo", "is_err_msg": False, "origin": "watchdog"})
             mqtt.set_rec(False)
@@ -82,8 +79,10 @@ def watchdog(
                     break
                 time.sleep_ms(timeout_pause)
             if not state:
-                    Log('Watchdog', '[ WARN  ]: Message wait timeout. Probably connection lost')
-                    mqtt.reconnect()
+                Log('Watchdog', '[ FAIL  ]: Message wait timeout. Probably connection lost')
+                if not check_status():
+                    Log('Watchdog', '[ FAIL  ]: No Connection to Wifi. See Wifi.log for details!')
+                mqtt.reconnect()
     return True
 
 # Function for Onboard-LED as ok indicator and check connection
