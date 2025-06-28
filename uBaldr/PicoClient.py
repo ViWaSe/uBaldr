@@ -4,7 +4,7 @@
 # The incoming orders are processed and executed by order.py and the answer is published to the status-topic
 # Settings stored in config.json
 
-version = '6.4.1a'
+version = '6.4.1b'
 
 import utime as time
 from mqtt_handler import MQTTHandler
@@ -19,11 +19,7 @@ mqttBroker      = settings.get('MQTT-config', 'Broker')
 mqttPort        = settings.get('MQTT-config', 'Port')
 mqttUser        = settings.get('MQTT-config', 'User')
 mqttPW          = settings.get('MQTT-config', 'PW')
-
-try:
-    publish_in_Json = settings.get('MQTT-config', 'publish_in_json')
-except KeyError:
-    publish_in_Json = False
+publish_in_Json = settings.get('MQTT-config', 'publish_in_json')
 
 # Set the LED-Timer depending on the platform (pico or not)
 if is_pico:
@@ -45,7 +41,7 @@ mqtt = MQTTHandler(
     pinjson=publish_in_Json # type: ignore
 )
 
-# Watchdog-function to check if connection still up
+# Watchdog-function to check the connection to the broker
 def watchdog(
         watch_time=60, 
         cooldown=5,
@@ -60,17 +56,25 @@ def watchdog(
 
     if pico_time - last_msg > watch_time:
         wd_counter += 1
-        Log('Watchdog', f'[ INFO  ]: Counter: {wd_counter} | RTC-Time={pico_time} | Last msg={last_msg}')
+        Log(
+            'Watchdog', 
+            f'[ INFO  ]: Counter: {wd_counter} | RTC-Time={pico_time} | Last msg={last_msg}'
+            )
         
         last_msg = pico_time 
         watchdog_last_chk = pico_time
 
         if wd_counter % 2 == 0:
-            Log('Watchdog', '[ CHECK ]: Very quiet here. Checking connection...')
+            Log(
+                'Watchdog', 
+                '[ CHECK ]: Very quiet here. Checking connection...'
+                )
             
+            # Publish the echo-message to the /status-topic and set received to false
             mqtt.publish(f'{mqttClient}/status', {"msg": "echo", "is_err_msg": False, "origin": "watchdog"})
             mqtt.set_rec(False)
 
+            # check for answer, break if received
             for i in range (timeout_loops):
                 mqtt.check_msg()
                 state = mqtt.get_rec()
@@ -78,10 +82,17 @@ def watchdog(
                     Log('Watchdog', '[ CHECK ]: Connection still up!')
                     break
                 time.sleep_ms(timeout_pause)
+            
             if not state:
-                Log('Watchdog', '[ FAIL  ]: Message wait timeout. Probably connection lost')
+                Log(
+                    'Watchdog', 
+                    '[ FAIL  ]: Message wait timeout. Probably connection lost'
+                    )
                 if not check_status():
-                    Log('Watchdog', '[ FAIL  ]: No Connection to Wifi. See Wifi.log for details!')
+                    Log(
+                        'Watchdog', 
+                        '[ FAIL  ]: No Connection to Wifi. See Wifi.log for details!'
+                        )
                 mqtt.reconnect()
     return True
 

@@ -2,7 +2,7 @@
 # Currently 1 and 2 layers are supported, 2 means that the file is structured like >>>{"Example-Group": [{"example param": "example string"], "example-Group 2": [{"Example int-data": 2, ...<<<
 # To parse a json-file, create a config()-Object and get the data you want with the get()-function. (t.ex example=config(file='example.json', layers=2) ==> example.get('group', 'param'))
 # Use the save-param()-function to save or update data the same way as getting it with the get()-function (t.ex. example.save_param('group', 'param', 'new value'))
-version = '2.1'
+version = '2.1.1'
 
 import json
 import sys
@@ -14,7 +14,7 @@ class config(object):
     
     def __init__(
             self, 
-            file='config.json', # hallo
+            file='config.json',
             layers=2
     ):
         self.file   = file
@@ -29,13 +29,16 @@ class config(object):
             group=None, 
             param=None
     ):
-        if self.layers==1:
-            return self.conf[param]
-        elif self.layers==2:
-            section = self.conf[group]
-            setting = section[0]
-            par = setting[param]
-            return par
+        try:
+            if self.layers==1:
+                return self.conf[param]
+            elif self.layers==2:
+                section = self.conf[group]
+                setting = section[0]
+                par = setting[param]
+                return par
+        except KeyError:
+            return False
 
 # Save / update parameter with a new value
     def save_param(
