@@ -1,37 +1,36 @@
-# uBaldr Version 6.4
+# uBaldr Version 7.1.1
 
 - changelog -
 
 # New Functions:
-> Added Setting to turn off the onboard-led.
-	- New Item in config.json "led_active" -> boolean value
-	- New Admin-command "onboard_led_active" -> boolean value
-	- Re-designed the onboard-led-handling and moved all functions to a new module
-> Added new LightControl-Features:
-	- "smooth": Change the color at all pixels with a "soft" color transition. You can define a customized speed (default is 5ms) and set steps (default is 50)
-	- Added the "dir"-parameter for color-setting "line" in the order-module. Line can now set forward and backward.
-> Additional changes in LightControl.py:
-	- Changed the list-apend-function. If now a list with i.E. only 2 objects is given, it will allways append until it has 4 objects. That means, that also a color is set, if you only have 1 or 2 objects in the list (i.E. [255, 50] -> [255,50,0,0])
-> Changes in order.py for sub_type "LC":
-	- The "speed"-paameter is not needed anymore. If no speed is set in the JSON-String, the default value (5ms) is used.
-	- The "format"-parameter for "line" or "smooth" is not needed anymore. Order detects automatically the type of the payload. If there is an Error (i.E. type is string, but not hex) it will return that the order has failed.
-	-> This makes the "LC"-Order much simplier. All you need now is "command" and "payload" to set a color or dim the lights!
-> Improved the OTA-Update-function. If "module_name" in the order-JSON is "all", all modules are updated automatically. No need to send a list of all modules.
 
-> Added possibility to publish in JSON for better handling and more possibility. All results from the functions are now returned as dict. 
-	- If "publish_in_json" is "True", all messages are published in JSON-String. Example: {"msg": True, "is_err_msg": False, "origin": "LC"}
-	- The function can be activated by sending the admin-command {"sub_type": "admin", "command": "publish_in_json", "new_value": True} and is then active after reboot.
-	- With this change you can now filter your message by error or status-message
+> Changed the PiciWifi-Module to uWifi. Improved the code and changed the behavior:
+    - To connect with a wifi, now a instance needs to be created with wifi = client(). You can call then the wifi.connect() Method to establish the connection.
+    - It's now also possible to make the instance without having a JSON-Config-File. That makes the module usable in other projects
 
-> New admin-functions: "publish_in_json": True/False (not fully tested yet), "onboard_led_active": True/False
+> Major-changes in logger-module:
+    - In every module, an instance of logger is now created. To log an event, the log-mothod is called from this instance.
+    Example:
+        event = logger.Create('test', '/log/')
+        event.log('I', 'This is a test')
+    - This makes the logging more flexible and avoids mistakes in the code. 
+    - There is also a Dummy_logger class if the logging is not used
+    - The changes are applied to all modules, means that it is not downward-compatible!
 
-Removed functions:
-> Removed the need of an reboot-password
+> Major changes in NTP-Module:
+    - Moved the functions to a class for better handling
+    - Added the possibility to not use a JSON-Config file. The json_config_parser is only imported if JSON is used. This makes the module more flexible.
+
+> Changes in json_config_parser:
+    - Added Exeption for OS-Error and Option to create a new file in case, the wanted one does not exist: If this option is turned on, a new, empty JSON-File is created.
+      The purpose of that is to make it possible to create new JSON-Config-Files. If the option is turned off, an Error is returned instead of crashing the program.
+
+# Removed functions:
+
 
 # Bugfixes:
-> Improved Watchdog with Timeout:
-	- When watchdog checked the MQTT-connection, it simply published a message and waited for answer with the wait_msg()-method. However if there was no answer, the code stopped and waited for ever. No error or reconnect!
-		-> Changed watchdog so, that it now asks 5 times for answer with check_msg(). If there is no answer, it tries to reconnect. The error is then logged to Watchdog.log
+    uWifi:
+        - Added an exeption to the connect-function to avoid the program to exit if it tries to connect and wifi chip is noch active.
+
 > Problem with NTP-Timestamp:
-	- If a ESP-32-S3 was used, the NTP-Timestamp was in year 2055. This was caused by an known bug in the firmware. Fixed the issue by adding a date validation.
- 
+	

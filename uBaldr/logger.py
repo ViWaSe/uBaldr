@@ -1,42 +1,90 @@
-# Logger for Issues in the Baldr-Software
+version = [3,1,0]
 
-version = '1.3.2'
-
-import NTP
 import os
 
-ntp_time    = NTP.timestamp()
+class Create:
 
-# Check size of the logfole. If it reaches 'max_size', delete the content
-def check_and_clear_log(log_file, max_size):
-    global version
-    
-    size = os.stat(log_file)[6] 
-    if size > max_size:
-        with open(log_file, 'w') as f:
-            f.write('***   LOGGER V '+ str(version)+' | File='+str(log_file)+'   ***')
+    def __init__(
+            self,
+            file_name,
+            dir,
+            max_size=4096,
+            use_timestamp=True
+    ):
         
-# Log-function. can be imported and used in all other programs
-def Log(
-        sub='Pico', 
-        issue=None,
-        dir='/log/',
-        max_size=4096
-        ):
-    
-    sub_file = dir + sub + '.log'
-    time = NTP.timestamp()
-    with open(sub_file, 'a') as file:
-        file.write(str(time) + ' >>> ' + str(issue) + '\n')
-    
-    # Check and / or clear logfile
-    check_and_clear_log(log_file=sub_file, max_size=max_size)
+        """
+        Parameters:
+            file_name (str): Name of the Logfile without extension: 'name' -> 'name.log'
+            dir (str): Location of the Logfile
+            max_size (int): Max size of the Logfile. Content will be deleted when this size is reached.
 
-# return logfile content 
-def get_log(sub, dir='/log'):
-    try:
-        with open(f'/{dir}/{sub}.log', 'r') as f:
-            content = f.read()
-        return content
-    except FileNotFoundError:
-        return 'Extraction fof logs failed! File not found!'
+        Methods:
+        --------
+            log(level, event): Logs an event to the logfile.
+            get_log(filepath): Returns the content of a file.
+            check_and_clear(): Checks the filesize and clears the logfile if max_size is exceeded.
+        """
+
+        self.file = str(f'{file_name}.log')
+        self.dir = dir
+        self.max_size = max_size
+        self.filepath = str(f'{self.dir}/{self.file}')
+
+        if use_timestamp:
+            import NTP
+            ntp = NTP.NTP()
+            self.time = ntp.timestamp()
+        else:
+            self.time = 'NOTIME'
+
+        try:
+            with open(self.filepath, 'r'):
+                pass
+        except OSError:
+            with open(self.filepath, 'w') as f:
+                f.write(f'***   LOGGER V{str(version)} | File={str(self.filepath)}   ***')
+
+    def log(self, level, event):
+        """
+        Parameters:
+            level(str): I=Info, E=Error, W=Warning, F=Fatal, N=N/A or unknown
+            event(str): The issue that is logged
+        """
+
+        LOG_LEVEL = {
+        'I': '[  INFO  ]',
+        'E': '[  ERROR ]',
+        'W': '[  WARN  ]',
+        'F': '[  FATAL ]',
+        'N': '[  N/A   ]'
+    }
+        self.check_and_clear()
+        loglevel = LOG_LEVEL.get(level)
+
+        with open(self.filepath, 'a') as file:
+            file.write(f'{str(self.time)} >>> {loglevel}: {str(event)} \n')
+    
+    def check_and_clear(self):
+        global version
+
+        size = os.stat(self.filepath)[6]
+        if size > self.max_size:
+            with open(self.filepath, 'w') as f:
+                f.write(f'***   LOGGER V{str(version)} | File={str(self.filepath)}.log   ***')
+    
+    def get_log(self, filepath):
+        try:
+            with open(filepath, 'r') as f:
+                content = f.read()
+            return content
+        except OSError as e:
+            return f'Extraction of logs failed! - {e}'
+
+class DummyLogger:
+    def log(self, *args, **kwargs):
+        return None
+"""
+Example of usage:
+test = logger.Create('test', '/log/')
+test.log('I', 'This is a Test!')
+"""

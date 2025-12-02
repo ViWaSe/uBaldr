@@ -1,7 +1,7 @@
-# Simple script to start the Device
-version = '6.4.2b'
+# Simple script to start uBaldr
+version = [7,0,0]
 
-import PicoWifi as wlan
+from uWifi import Client
 import PicoClient as MQTT
 import LightControl
 
@@ -9,6 +9,7 @@ import LightControl
 print('[ INFO ] Welcome to BALDR Version', version)
 
 # Connect to WLAN using PicoWifi-Module
+wlan = Client()
 wlan.connect()
 print('[ INFO ] PicoWifi is connected!')
 

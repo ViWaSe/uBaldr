@@ -1,11 +1,13 @@
 # Smarthome Order-Modul by vwall
 
-version = '6.4.2'
+version = [7,0,1]
 
 import json
 from LightControl import LC as LightControl
-from logger import Log, get_log
+import logger
 from hex_to_rgb import hex_to_rgb
+
+event = logger.Create('order', '/log')
 
 class Proc:
     def __init__(self, data=None):
@@ -59,7 +61,7 @@ class Proc:
             command_map[command]()
             return self.make_result(msg=True, is_error=False, origin='LightControl')
         else:
-            Log('Order', f'[ INFO  ]: Command not found. Command = {command}')
+            event.log('E', f'Command >>{command}<< not found!')
             return self.make_result(msg='Command not found!', is_error=True, origin='LightControl')
 
     # Admin-Functions
@@ -73,6 +75,7 @@ class Proc:
         command_map = {
             'echo': lambda: self.echo(),
             'offline': lambda: self.handle_offline(),
+            'alive': lambda: self.ok(),
             'get_version': lambda: self.get_version(),
             'change_led_qty': lambda: self.change_led_qty(new_value),
             'get_qty': lambda: LightControl.pixel,
@@ -92,6 +95,9 @@ class Proc:
     def echo(self):
         return self.make_result(msg='alive', origin='admin')
     
+    def ok(self):
+        return self.make_result(msg='ok', origin='admin')
+    
     def pinjson(self, value: bool):
         from PicoClient import settings, publish_in_Json
         if publish_in_Json != value:
@@ -101,7 +107,6 @@ class Proc:
 
     # Log when Broker is offfline
     def handle_offline(self):
-        Log('MQTT', '[ INFO  ]: Broker is offline under normal conditions')
         return 'conn_lost'
 
     def get_sysinfo(self):
@@ -111,19 +116,21 @@ class Proc:
 
     # Reboot-request
     def reboot(self):
-        Log('Order', '[ INFO  ]: Reboot requested. Will now call a machine.reset()')
+        event.log('I', 'Reboot requested. Will now call a machine.reset()')
         import machine
         machine.reset()
     
     def onboard_led_active(self, new_state):
-        from PicoWifi import led_onboard
+        from uWifi import Client
+        led_onboard = Client.get_led()
         led_onboard.set_active(new_state)
         return self.make_result(msg=f'onboard_led active setting -> {new_state}', is_error=False, origin='admin')
     
     # Get Timestamp from NTP-Module
     def get_timestamp(self):
-        from NTP import timestamp
-        return self.make_result(msg=timestamp(), is_error=False, origin='admin/NTP')
+        import NTP
+        time = NTP.NTP()
+        return self.make_result(msg=time.timestamp(), is_error=False, origin='admin/NTP')
     
     # Change NTP-Settings (Wintertime and GMT-Osffset)
     def change_GMT_time(
@@ -139,20 +146,20 @@ class Proc:
         
         if winter != use_winter_time:
             time_setting.save_param(param='use_winter_time', new_value=winter)
-            Log('NTP', f'[ INFO  ]: Changed Wintertime to {winter}')
+            #Log('NTP', 'I', f'Changed Wintertime to {winter}')
             return self.make_result(msg=f'set wintertime to {winter}. Changes will take effect after reboot', is_error=False, origin='admin/NTP')
         
         if GMT_adjust != GMT_offset:
             time_setting.save_param('GMT_offset', GMT_adjust)
-            Log('NTP', f'[ INFO  ]: Adjusted GMT-Offset to {GMT_adjust}')
+            #Log('NTP', 'I', f'Adjusted GMT-Offset to {GMT_adjust}')
             return self.make_result(msg=f'set GMT-Offset to {GMT_adjust}. Changes will take effect after reboot', is_error=False, origin='admin/NTP')
 
     def get_version(self):
         import versions
         if self.data['sub_system'] == 'all':
-            return self.make_result(msg=versions.all(), is_error=False, origin='admin')
+            return self.make_result(msg=versions.all(), is_error=False, origin='admin/versions')
         else:
-            return self.make_result(msg=versions.by_module(self.data['sub_system']), is_error=False, origin='admin') 
+            return self.make_result(msg=versions.by_module(self.data['sub_system']), is_error=False, origin='admin/versions') 
 
     # Change LED-quantity
     def change_led_qty(self, new_value):
@@ -165,9 +172,24 @@ class Proc:
         return self.make_result(msg=f'NeoPixel Autostart changed to {new_value}', origin='LightControl')
 
     def get_log(self):
-        sub = self.data['subsystem']
-        logs = get_log(sub)
+        sub = self.data['logfile']
+        logs = event.get_log(str(sub))
         return self.make_result(msg=logs, is_error=False, origin='admin')
+    
+    def set_mqtt(self):
+        broker = self.data['broker']
+        client = self.data['client']
+        user = self.data['usr']
+        pw = self.data['pw']
+
+        from json_config_parser import config
+        conf = config('/params/config.json', 2)
+        conf.save_param('MQTT-config', 'Broker', broker)
+        conf.save_param('MQTT-config', 'Client', client)
+        conf.save_param('MQTT-config', 'User', user)
+        conf.save_param('MQTT-config', 'PW', pw)
+
+        return self.make_result(msg=f'Changed MQTT-Settings. New Broker: {broker} | New Client-Name: {client} The client will no longer be reachable via this broker after a reboot!')
 
 # Run a JSON-String
 def run(json_string):
@@ -184,12 +206,12 @@ def run(json_string):
         call = getattr(order_instance, order)()
         return call
     except KeyError as e:
-        Log('Order', f'[ ERROR ]: Key-Error / Key not found - {e}')
+        event.log('E', f'Key-Error / Key not found - {e}')
         return order_instance.make_result(msg=f"Key not found: {e}", is_error=True, origin='order_processing')
     except AttributeError:
-        Log('Order', f'[ ERROR ]: The sub-type >{order}< is not a known instance')
+        event.log('E', f'The sub-type >{order}< is not a known instance')
         return order_instance.make_result(msg=f"Command not found!", is_error=True, origin='order_processing')
     except Exception as e:
-        Log('Order', f'[ ERROR ]: Unknown Error - {e}')
+        event.log('E', f'Unknown Error - {e}')
         return order_instance.make_result(msg=f"Unknown Error: {e}", is_error=True, origin='order_processing')
 

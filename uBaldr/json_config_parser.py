@@ -2,26 +2,43 @@
 # Currently 1 and 2 layers are supported, 2 means that the file is structured like >>>{"Example-Group": [{"example param": "example string"], "example-Group 2": [{"Example int-data": 2, ...<<<
 # To parse a json-file, create a config()-Object and get the data you want with the get()-function. (t.ex example=config(file='example.json', layers=2) ==> example.get('group', 'param'))
 # Use the save-param()-function to save or update data the same way as getting it with the get()-function (t.ex. example.save_param('group', 'param', 'new value'))
-version = '2.1.1'
+version = [2,2,0]
 
 import json
-import sys
-
-# Add /params directory
-sys.path.insert(0, "./params")
 
 class config(object):
-    
+
     def __init__(
             self, 
             file='config.json',
-            layers=2
+            layers=2,
+            create_new=False
     ):
+        
+        """
+        Parameters:
+
+            file (str): The Config-File you want to parse
+            layers (int): The number of layer / level the JSON-File has
+            create_new(bool): Create a new JSON-file if file doesn't exist. You have to insert the parameters with save_param() or save_lib()
+
+        Methods:
+        --------
+            save_param()
+            save_lib()
+        """
+
         self.file   = file
         self.layers = layers
-
-        with open(self.file) as f:
-            self.conf = json.load(f)
+        try:
+            with open(self.file) as f:
+                self.conf = json.load(f)
+        except OSError:
+            if create_new:
+                with open(self.file, 'w') as f:
+                    f.close()
+            else:
+                return
     
 # get data by the original name in the json-file   
     def get(
@@ -29,6 +46,16 @@ class config(object):
             group=None, 
             param=None
     ):
+        
+        """
+        Get an Object of the JSON-File.
+        
+        Parameter:
+
+        group (str): If the File has 2 layers / levels - The name of the Array / Group
+        param (str): The Object you want to get
+        """
+
         try:
             if self.layers==1:
                 return self.conf[param]
@@ -47,6 +74,14 @@ class config(object):
             param=None, 
             new_value=None
     ):
+        
+        """
+        Parameters:
+            group(str): The Parameter-group, if the file has 2 JSON-layers
+            param(str): The Parameter that is to be changed
+            new_value(Any): The new value of the Parameter. NOTE! Every value can be added, no warning!
+        """
+        
         if self.layers == 1:
             self.conf[param] = new_value
         elif self.layers == 2:

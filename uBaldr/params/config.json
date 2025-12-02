@@ -1,24 +1,24 @@
 {
     "config_version": "5.4",
-    
+    "created_by": "default",
+
     "LightControl_settings": [
         {
             "autostart": true,
             "bytes_per_pixel": 4,
-            "led_onboard": "LED",
             "led_pin": 8,
             "led_qty": 2
         }
     ],
     "MQTT-config": [
         {
-            "Broker": "192.168.178.121",
-            "Client": "test",
+            "Broker": "",
+            "Client": "",
             "md_pin": "N/A",
             "Port": 1883,
-            "PW": "loki",
-            "User": "picow",
-            "check_intervall": 10
+            "PW": "",
+            "User": "",
+            "publish_in_json": true
         }
     ],
     "Options": [
@@ -33,10 +33,10 @@
     "Wifi-config": [
         {
             "country": "DE",
-            "IP": "192.168.178.90",
+            "IP": "",
             "PW": "",
             "SSID": "",
-            "Hostname": "Pico_test",
+            "Hostname": "",
             "onboard_led": 21,
             "led_inverted": true,
             "led_active": true

@@ -3,12 +3,12 @@
 # works with micropython v1.21.0 and higher
 # TODO: Implement the check_connection-function
 
-version = [7,1,0]
+version = [7,1,1]
 
 import utime as time
 import network, machine
 from json_config_parser import config
-from logger import Log
+import logger
 from Led_controller import LedController
 import sys
 
@@ -76,6 +76,7 @@ class Client:
                 }
             self.testhost   = self.settings.get('MQTT-config', 'Broker')
             self.store_ip    = True
+        
         elif not use_config_json:
             self.wlanSSID    = wlanSSID
             self.wlanPW      = wlanPW
@@ -88,7 +89,6 @@ class Client:
                 }
             self.testhost   = testhost
             self.loglevel   = loglevel
-        self.wlog    = 'Wifi'
         self.max_attempts   = max_attempts
         self.is_pico        = sys.platform == 'rp2'
         self.led_onboard    = LedController(self.is_pico, self.led_set)
@@ -107,6 +107,8 @@ class Client:
             rp2.country = self.settings.get('Wifi-config', 'country')
             self.wlan.config(pm=0xa11140) 
 
+        self.event = logger.Create('wifi', '/log/')
+
     def error_handler(self, errno):
         ERROR_CODES = {
             0: 'LINK_DOWN',
@@ -124,35 +126,43 @@ class Client:
         network.hostname(self.hostname)
 
         for attempts in range(1, max_attempts + 1):
-            Log(self.wlog, 'I', f'Connecting to {self.wlanSSID}... | Attempt: {attempts}/{max_attempts}')
+            self.event.log('I', f'Connecting to {self.wlanSSID}... | Attempt: {attempts}/{max_attempts}')
             
             if self.wlan.isconnected():
                 ifconf = self.wlan.ifconfig()
-                Log(self.wlog, 'I', f'Successfully reconnected to {self.wlanSSID}! IP={ifconf[0]}')
+                self.event.log('I', f'Successfully reconnected to {self.wlanSSID}! IP={ifconf[0]}')
                 self.led_onboard.on()
                 return
             self.wlan.active(False)
             time.sleep(0.5)
             self.wlan.active(True)
-            self.wlan.connect(self.wlanSSID, self.wlanPW)
+            try:
+                self.wlan.connect(self.wlanSSID, self.wlanPW)
+            except OSError as E:
+                self.event.log('F', f'OS-Error! - {E}. Will now reset...')
+                time.sleep(1)
+                machine.reset()
 
             if self.wait_connection(timeout=timeout):
                 self.led_onboard.on()
                 ifconfig = self.wlan.ifconfig()
-                Log(self.wlog,'I',f'Connected successfully to {self.wlanSSID}. IP = {ifconfig[0]}')
+                self.event.log('I',f'Connected successfully to {self.wlanSSID}. IP = {ifconfig[0]}')
                 self.save_ip(ifconfig[0])
                 return
             else:
                 wstat = self.error_handler(self.wlan.status())
-                Log(self.wlog,'W',f'Attempt {attempts}; Connection to {self.wlanSSID} failed! status={wstat}')
+                self.event.log('W',f'Attempt {attempts}; Connection to {self.wlanSSID} failed! status={wstat}')
 
-        Log(self.wlog,'E',f'Connection has been failed after Attempt {attempts}/{max_attempts}! Will now reset...')
+        self.event.log('E',f'Connection has been failed after Attempt {attempts}/{max_attempts}! Will now reset...')
         machine.reset()  
 
     def wait_connection(self, timeout=10):
         """
         Wait until WLAN is connected or timeout is reached.
         Returns True if connected.
+
+        Parameters:
+            timeout(int): The connection-timeout in seconds.
         """
         if self.wlan.isconnected():
             return True
@@ -163,25 +173,25 @@ class Client:
             wstat = self.error_handler(self.wlan.status())
 
             if status == 0:  
-                Log(self.wlog, 'I', f'WSTAT: {wstat} - Wifi idle...')
+                self.event.log('I', f'WSTAT: {wstat} - Wifi idle...')
             elif status == 1:
-                Log(self.wlog, 'I', f'WSTAT: {wstat} - Joining network...')
+                self.event.log('I', f'WSTAT: {wstat} - Joining network...')
             elif status == -2:
-                Log(self.wlog, 'E', f'WSTAT: {wstat} - Network not found or bad signal!')
+                self.event.log('E', f'WSTAT: {wstat} - Network not found or bad signal!')
                 return False
             elif status == -3:
-                Log(self.wlog, 'E', f'WSTAT: {wstat} - Authentication failed - Wrong password')
+                self.event.log('E', f'WSTAT: {wstat} - Authentication failed - Wrong password')
                 return False
             elif status == 3:
                 return True
             elif status == -1:
-                Log(self.wlog, 'E', f'WSTAT: {wstat} - Handshake with AP failed')
+                self.event.log('E', f'WSTAT: {wstat} - Handshake with AP failed')
                 return False
             self.led_flash(250, 500)
             self.led_flash(250, 0)
 
             if time.ticks_diff(time.ticks_ms(), start) > timeout * 1000:
-                Log(self.wlog, 'E', f'Timeout after {timeout}s waiting for connection')
+                self.event.log('E', f'Timeout after {timeout}s waiting for connection')
                 return False
 
             time.sleep(0.5)
@@ -208,38 +218,25 @@ class Client:
         ifconfig = self.wlan.ifconfig()
         return ifconfig
 
-    def check_status(self, retries, timeout):
-        pass
+    def check_connection(self, retries=5, timeout=5):
+        """
+        Parameters:
+            retries (int): Number of retries. When reached, it logs an error and returns "False"
+            timeout (int): Timeout for connection to the test host in s.
+        """
+        import socket
+        testhost = self.testhost
 
+        for trie in range (1, retries + 1):
+            try:
+                s = socket.socket()
+                s.settimeout(timeout)
+                s.connect(testhost)
+                s.close()
+                self.event.log('I', f'CONNTEST: Tested connection to {testhost} successfully!')
+                return True
+            except Exception as conn_error:
+                self.event.log('E', f'{trie}/{retries}: Connection to {testhost} failed: {conn_error}')
         
-
-
-
-"""# Check Wifi connection status. If not successful, try to reconnect.
-def check_status(
-        retries=60, 
-        timeout=2
-        ):
-    
-    import socket
-    global wlan
-    try:
-        s = socket.socket()
-        s.settimeout(timeout)
-        s.connect((test_host, 1883))
-        s.close()
-        Log('WIFI', 'I', 'Successfully tested network connection!')
-        return True
-    except Exception as e:
-        Log('WIFI', 'E', 'Wifi connection lost - ' + str(e))
-        if retries > 0:
-            Log('WIFI', 'I', 'Retrying connection...')
-            Log('WIFI', 'I', 'Number of retries: ' + str(retries))
-            retries -=1
-            led_flash(on=500, off=500)
-            led_flash(on=500, off=500)
-            connect() 
-        else:
-            Log('WIFI', 'E', 'Failed to reconnect after several attempts. Will reboot now...')
-            machine.reset()
-"""
+        self.event.log('E', f'Connection to {testhost} was unsuccessful - {retries} attempts failed!')
+        return False

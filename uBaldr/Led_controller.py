@@ -1,4 +1,6 @@
-version = "0.1.0"
+version = [1,1,0]
+
+# TODO: Finish the docstrings!
 
 from machine import Pin
 
@@ -36,7 +38,19 @@ class InvertedLed(LedInterface):
     def is_on(self): return self.led.value() == 0
 
 class LedController:
-    def __init__(self, is_pico: bool, settings: dict, led_active: bool = True):
+    def __init__(
+            self, 
+            is_pico: bool,
+            settings: dict, 
+            led_active: bool = True
+            ):
+
+        """
+        Parameters:
+            is_pico (bool): Is the device a Raspberry Pi Pico?
+            settings (dict): A JSON with the led-settings. LED-Pin and if the led is inverted: {"onboard_led": 2, "led_inverted": True}
+            led_active (bool): enable or disable the led
+        """
         self.led_active = led_active
 
         if not self.led_active:

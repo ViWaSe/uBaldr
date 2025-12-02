@@ -1,7 +1,5 @@
-# harvest the Versions of the modules
-
 from PicoClient import version as Client
-from PicoWifi import version as Wifi
+from uWifi import version as Wifi
 from order import version as Order
 from NTP import Version as NTP
 from LightControl import version as LC
@@ -19,14 +17,26 @@ versions = {
     'json': json, 
     'mqtt_handler': mqtt_handler,
     'Led_controller': led_controller,
-    'logger': logger
+    'logger': logger,
+    'main': [7,0,0]
     }
 
 def by_module(module):
-    return versions[module]
+    sub = versions[module]
+    if type(sub) is list:
+        if len(sub) < 4:
+            return str(f'{sub[0]}.{sub[1]}.{sub[2]}')
+        else:
+            return str(f'{sub[0]}.{sub[1]}.{sub[2]}{sub[3]}')
+    else:
+        return versions[module]
 
 def all():
     return versions
 
-def depencies():
+def compatibility_check():
+    release_code=20251007
     pass
+
+def version_string(sub):
+    return str(f'{sub[0]}.{sub[1]}.{sub[2]}')

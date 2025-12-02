@@ -5,13 +5,13 @@
 # NOTE: The "type: ignore" commtents are for the vs-code micropico extension only! The main reason is that the values from the JSON-File are unknown
 # NOTE: For WW/CW LEDs (24V): setting bpp = 3 is required (Byte 0=warm, 1=cold, 2=not used)
 
-version='6.4.0'
+version=[7,0,0]
 
 import utime as time
 from neopixel import NeoPixel
 from machine import Pin
 from json_config_parser import config
-from PicoWifi import Log
+import logger
 
 try:
     from typing import Any
@@ -19,24 +19,68 @@ except ImportError:
     Any = object
 
 class LightControl:
-    def __init__(self, config_file='/params/config.json', status_file='/params/status.json'):
-        self.settings   = config(config_file, layers=2)
+    def __init__(
+            self,
+            use_config_json=True, 
+            config_file='/params/config.json', 
+            status_file='/params/status.json',
+            logging=True,
+            led_pin=15,
+            bpp=3,
+            pixel_pty=12,
+            autostart=True
+            ):
+        
+        """
+        Parameters:
+            use_config_json (bool): True, if a JSON file is used for settings. Must have 2 layers. The json_config_parser is needed.
+            config_file (str): Location of the configuration-file.
+            status_file (str): Location of the status-file, where level and color will be saved.
+            logging (bool): Events are logged in the /log/ directory
+            led_pin (int): Neopixel LED-Pin.
+            bpp (int): Bytes per pixel value. 3=RGB, 4=RGBW
+            pixel_pty (int): The Number of LEDs that are adressed.
+            autostart (bool): Load the last color- and dim- setting from the status.json file.
+
+        Methods:
+        --------
+            static(): sets all pixels at the same time.
+            line(): sets pixels by line-animation
+            set_smooth(): sets pixels by a smooth transition
+            set_dim(): sets a dimmer-level
+            change_autostart(): sets the autostart-state. If true, the pixels will be set to the last known state when power on
+            change_pixel_qty(): changes the pixel-quantity
+            ret_dim(self): returns the actual light level
+        """
+
+        if use_config_json:
+            self.settings   = config(config_file, layers=2)
+            self.led_pin    = self.settings.get('LightControl_settings', 'led_pin')
+            self.bpp        = self.settings.get('LightControl_settings', 'bytes_per_pixel')
+            self.autostart  = self.settings.get('LightControl_settings', 'autostart')
+            self.pixel_qty  = self.settings.get('LightControl_settings', 'led_qty')
+        else:
+            self.led_pin    = led_pin
+            self.bpp        = bpp
+            self.pixel_qty  = pixel_pty
+            self.autostart  = autostart
+
         self.status     = config(status_file, layers=1)
         self.cache      = self.status.get(param='color')
-
-        self.led_pin    = self.settings.get('LightControl_settings', 'led_pin')
-        self.bpp        = self.settings.get('LightControl_settings', 'bytes_per_pixel')
-        self.autostart  = self.settings.get('LightControl_settings', 'autostart')
         self.dim_status = self.status.get(param='dim_status')
 
+        if logging:
+            self.event = logger.Create('LightControl', '/log')
+        else:
+            self.event = logger.DummyLogger()
+
         # Check Pixel-Value
-        pixel_value     = self.settings.get('LightControl_settings', 'led_qty')
-        if pixel_value is None:
+        if self.pixel_qty is None:
             missing_pixel_error = "Missing 'led_gty' in config.json!"
-            Log('LC',f' [ ERROR ]: {missing_pixel_error}')
+            self.event.log('E', f'Initialization failed! - {missing_pixel_error}')
             return missing_pixel_error
         
-        self.pixel: int = int(pixel_value)
+        self.pixel: int = int(self.pixel_qty)
 
         self.level = 0
         self.led = Pin(self.led_pin, Pin.OUT, value=0)
@@ -76,6 +120,15 @@ class LightControl:
             target, 
             speed=1
             ):
+        
+        """
+        Dims the LED-levels in a smooth animation.
+
+        Parameter:
+            target (int): Target-Level. Values from 0-100.
+            speed (int): Pause between the 1%-steps in ms.
+        """
+
         actual = int(self.level * 100)
         target = int(target)
         if actual == target:
@@ -149,6 +202,17 @@ class LightControl:
             start=0,
             ):
         
+        """
+        Sets the color by a line-animation.
+
+        Parameter:
+            color (list): Target-color in rgbw-list-format. A list with 4 objects is expected (e.g. [255,0,0,0]).
+            speed (int): Pause between the steps in ms.
+            dir (int): Direction of the line. 1=forward, 2=backwards.
+            gap (int): Gap betwen the leds in the animation. 1=no gap.
+            start (int): start of the animation. 0=start on the first led.
+        """
+        
         line = start
         color = list(color)
         while len(color) < 4:
@@ -186,6 +250,15 @@ class LightControl:
             speed=10, 
             steps=50
             ):
+        
+        """
+        Change the color by smooth transition.
+        
+        Parameters:
+            target_color(list): A list with 4 integer objects with the color-value (R,G,B,W | 0...255). At least one value is needed. If one is missing (i.e. W), only the given colors are set (255,255 -> 255,255,0,0).
+            speed(int): Pause between steps in ms. 10 is default.
+            steps(int): Transition steps between pause. 50 is recommended to run a smooth animation.
+            """
         
         current = list(self.cache) # type: ignore
         target = list(target_color)

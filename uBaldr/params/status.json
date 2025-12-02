@@ -1,7 +1,5 @@
 {
-"Info":             "LightControl-Status is stored in this file. Should not be edited manually",
+"Info":             "LightControl-Status is stored in this file.",
 "color":			[0,0,0,0],
-"dim_status":		100,
-"log_counter":      0,
-"max_logs":     200
+"dim_status":		100
 }
