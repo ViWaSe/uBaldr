@@ -1,3 +1,7 @@
+
+
+<img width="1024" height="1024" alt="BaldrOS" src="https://github.com/user-attachments/assets/14234b7b-3ecf-4e38-92b5-b50994df123f" />
+
 # uBaldr
 This is a Micropython Smarthome / IoT-project using Raspberry PicoW or ESP-32 microcontroller.
 
