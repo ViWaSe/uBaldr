@@ -1,6 +1,6 @@
 # Smarthome Order-Modul by vwall
 
-version = [7,0,1]
+version = [7,0,1,'a']
 
 import json
 from LightControl import LC as LightControl
@@ -99,7 +99,7 @@ class Proc:
         return self.make_result(msg='ok', origin='admin')
     
     def pinjson(self, value: bool):
-        from PicoClient import settings, publish_in_Json
+        from mqtt_Client import settings, publish_in_Json
         if publish_in_Json != value:
             settings.save_param(group='MQTT-config', param='publish_in_json', new_value=value)
             publish_in_Json = value
@@ -172,8 +172,8 @@ class Proc:
         return self.make_result(msg=f'NeoPixel Autostart changed to {new_value}', origin='LightControl')
 
     def get_log(self):
-        sub = self.data['logfile']
-        logs = event.get_log(str(sub))
+        path = f'/log/{self.data['module']}.log'
+        logs = event.get_log(str(path))
         return self.make_result(msg=logs, is_error=False, origin='admin')
     
     def set_mqtt(self):

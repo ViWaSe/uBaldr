@@ -1,4 +1,4 @@
-from PicoClient import version as Client
+from mqtt_Client import version as Client
 from uWifi import version as Wifi
 from order import version as Order
 from NTP import Version as NTP
@@ -7,6 +7,8 @@ from json_config_parser import version as json
 from mqtt_handler import version as mqtt_handler
 from Led_controller import version as led_controller
 from logger import version as logger
+
+version = [1,2,0]
 
 versions = {
     'PicoClient': Client, 

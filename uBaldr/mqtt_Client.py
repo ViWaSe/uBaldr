@@ -49,7 +49,7 @@ mqtt = MQTTHandler(
     pinjson=publish_in_Json # type: ignore
 )
 
-event = logger.Create('MQTT', '/log')
+event = logger.Create('Client', '/log')
 wd_event = logger.Create('Watchdog', '/log')
 
 # Watchdog-function to check the connection to the broker

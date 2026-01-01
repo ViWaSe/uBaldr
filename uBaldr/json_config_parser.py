@@ -33,12 +33,12 @@ class config(object):
         try:
             with open(self.file) as f:
                 self.conf = json.load(f)
-        except OSError:
+        except OSError as e:
             if create_new:
                 with open(self.file, 'w') as f:
                     f.close()
             else:
-                return
+                return e
     
 # get data by the original name in the json-file   
     def get(

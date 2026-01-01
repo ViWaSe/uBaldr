@@ -1,4 +1,4 @@
-version = [3,1,0]
+version = [3,1,1]
 
 import os
 
@@ -9,7 +9,7 @@ class Create:
             file_name,
             dir,
             max_size=4096,
-            use_timestamp=True
+            use_ntp=True
     ):
         
         """
@@ -29,11 +29,12 @@ class Create:
         self.dir = dir
         self.max_size = max_size
         self.filepath = str(f'{self.dir}/{self.file}')
+        self.use_ntp = use_ntp
 
-        if use_timestamp:
+        if self.use_ntp:
             import NTP
-            ntp = NTP.NTP()
-            self.time = ntp.timestamp()
+            self.ntp = NTP.NTP()
+            self.time = self.ntp.timestamp()
         else:
             self.time = 'NOTIME'
 
@@ -51,6 +52,9 @@ class Create:
             event(str): The issue that is logged
         """
 
+        if self.use_ntp:
+            self.time = self.ntp.timestamp()
+
         LOG_LEVEL = {
         'I': '[  INFO  ]',
         'E': '[  ERROR ]',
@@ -62,7 +66,7 @@ class Create:
         loglevel = LOG_LEVEL.get(level)
 
         with open(self.filepath, 'a') as file:
-            file.write(f'{str(self.time)} >>> {loglevel}: {str(event)} \n')
+            file.write(f'\n{str(self.time)} >>> {loglevel}: {str(event)}')
     
     def check_and_clear(self):
         global version
