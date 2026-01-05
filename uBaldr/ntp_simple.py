@@ -120,4 +120,4 @@ class NTP:
 
     def _save_backup(self, tm):
         if self.cfg:
-            self.cfg.save_param('offline_time', list(tm))
+            self.cfg.save_param(param='offline_time', new_value=list(tm))

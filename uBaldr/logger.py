@@ -59,7 +59,7 @@ class Create:
         loglevel = LOG_LEVEL.get(level)
 
         with open(self.filepath, 'a') as file:
-            file.write(f'\n{_timestamp} >>> {loglevel}: {str(event)}')
+            file.write(f'\n{_timestamp()} >>> {loglevel}: {str(event)}')
     
     def check_and_clear(self):
         global version
