@@ -14,8 +14,8 @@ version = [1,3,0]
 platform = sys.platform
 
 versions = {
-    'PicoClient': Client, 
-    'PicoWifi': Wifi, 
+    'Client': Client, 
+    'Wifi': Wifi, 
     'order': Order, 
     'NTP': NTP, 
     'LightControl': LC, 
