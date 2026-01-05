@@ -7,8 +7,11 @@ from json_config_parser import version as json
 from mqtt_handler import version as mqtt_handler
 from Led_controller import version as led_controller
 from logger import version as logger
+import sys
 
-version = [1,2,0]
+version = [1,3,0]
+
+platform = sys.platform
 
 versions = {
     'PicoClient': Client, 
@@ -20,7 +23,8 @@ versions = {
     'mqtt_handler': mqtt_handler,
     'Led_controller': led_controller,
     'logger': logger,
-    'main': [7,0,0]
+    'main': [7,1,1, 'a'],
+    'Platform': platform
     }
 
 def by_module(module):

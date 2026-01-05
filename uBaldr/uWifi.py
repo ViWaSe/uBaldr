@@ -3,7 +3,7 @@
 # works with micropython v1.21.0 and higher
 # TODO: Implement the check_connection-function
 
-version = [7,1,1]
+version = [7,1,2]
 
 import utime as time
 import network, machine
@@ -117,7 +117,15 @@ class Client:
             3: 'LINK_UP',
             -1: 'LINK_FAIL',
             -2: 'LINK_NONET',
-            -3: 'LINK_BADAUTH'
+            -3: 'LINK_BADAUTH',
+            200: 'STAT_BEACON_TIMEOUT',
+            201: 'STAT_NO_AP_FOUND',
+            202: 'STAT_WRONG_PASSWORD',
+            203: 'STAT_ASSOC_FAIL',
+            204: 'STAT_HANDSHAKE_TIMEOUT',
+            1000: 'STAT_IDLE - No activities',
+            1001: 'STAT_CONNECTING',
+            1010: 'STAT_GOT_IP'
         }
         return ERROR_CODES.get(errno, f'{errno}: UNKNOWN_ERROR')
         
@@ -172,19 +180,20 @@ class Client:
             status = self.wlan.status()
             wstat = self.error_handler(self.wlan.status())
 
-            if status == 0:  
+            if status == 0 or status == 1000:  
                 self.event.log('I', f'WSTAT: {wstat} - Wifi idle...')
-            elif status == 1:
+            elif status == 1 or status == 1001:
                 self.event.log('I', f'WSTAT: {wstat} - Joining network...')
-            elif status == -2:
+            elif status == -2 or status == 201:
                 self.event.log('E', f'WSTAT: {wstat} - Network not found or bad signal!')
                 return False
-            elif status == -3:
+            elif status == -3 or status == 202:
                 self.event.log('E', f'WSTAT: {wstat} - Authentication failed - Wrong password')
                 return False
-            elif status == 3:
+            elif status == 3 or status == 1010:
+                self.event.log('I', f'WSTAT: {wstat} - Connected!')
                 return True
-            elif status == -1:
+            elif status == -1 or status == 203 or status == 204:
                 self.event.log('E', f'WSTAT: {wstat} - Handshake with AP failed')
                 return False
             self.led_flash(250, 500)

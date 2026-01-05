@@ -1,6 +1,7 @@
-version = [3,1,1]
+version = [3,1,2]
 
 import os
+import NTP
 
 class Create:
 
@@ -32,7 +33,6 @@ class Create:
         self.use_ntp = use_ntp
 
         if self.use_ntp:
-            import NTP
             self.ntp = NTP.NTP()
             self.time = self.ntp.timestamp()
         else:
@@ -53,7 +53,8 @@ class Create:
         """
 
         if self.use_ntp:
-            self.time = self.ntp.timestamp()
+            ntp = NTP.NTP()
+            self.time = ntp.timestamp()
 
         LOG_LEVEL = {
         'I': '[  INFO  ]',
