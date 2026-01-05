@@ -1,6 +1,6 @@
 # New MQTT-Handler Module for Baldr V6.x
 
-version = [2,1,0, 'a']
+version = [2,1,0, 'b']
 
 from umqtt_simple import MQTTClient
 import utime as time
@@ -183,7 +183,7 @@ class MQTTHandler:
                 'main.py',
                 'LightControl.py',
                 'uWifi.py',
-                'mqtt_Client.py'
+                'mqtt_Client.py',
                 'mqtt_handler.py',
                 'order.py',
                 'logger.py',
