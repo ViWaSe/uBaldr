@@ -1,6 +1,6 @@
 # New MQTT-Handler Module for Baldr V6.x
 
-version = [2,1,0]
+version = [2,1,0, 'a']
 
 from umqtt_simple import MQTTClient
 import utime as time
