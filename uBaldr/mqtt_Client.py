@@ -10,6 +10,7 @@ import utime as time
 from mqtt_handler import MQTTHandler
 from uWifi import Client
 from json_config_parser import config
+from ntp_simple import NTP
 import logger
 import sys
 
@@ -17,6 +18,13 @@ import sys
 wlan = Client()
 wlan.connect()
 print('[ INFO ] PicoWifi is connected!')
+ntp = NTP(
+    use_json_config=True,
+    time_setting_file='/params/time_setting.json'
+)
+ok, msg = ntp.sync()
+print(f'[ INFO ] {msg}')
+
 led_onboard = Client.get_led()
 
 # load settings from the config file

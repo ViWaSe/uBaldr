@@ -1,6 +1,6 @@
 # New MQTT-Handler Module for Baldr V6.x
 
-version = [2,1,0, 'b']
+version = [2,1,0, 'd']
 
 from umqtt_simple import MQTTClient
 import utime as time
@@ -44,6 +44,7 @@ class MQTTHandler:
         self.received = False
 
         self.event = logger.Create('MQTT_Handler', '/log/')
+        self.ota_event = logger.Create('watchdog', '/log/')
 
     def connect(self):
         """
@@ -189,24 +190,24 @@ class MQTTHandler:
                 'logger.py',
                 'Led_controller.py',
                 'json_config_parser.py',
-                'NTP.py',
+                'ntp_simple.py',
                 'versions.py'
                 ]
 
         def update_single_module(name, url):
             try:
-                self.event.log('I', f'Downloading {name} from {url}')
+                self.ota_event.log('I', f'Downloading {name} from {url}')
                 response = requests.get(url)
                 if response.status_code == 200:
                     with open(name, "w") as f:
                         f.write(response.text)
-                    self.event.log('I', f'{name} updated successfully')
+                    self.ota_event.log('I', f'{name} updated successfully')
                     self.publish(f"{self.client_id}/status", {"msg": f'{name} update was successful!', "is_err_msg": False, "origin": "OTA_Update"})
                 else:
-                    self.event.log('E', f'Could not download {name}')
+                    self.ota_event.log('E', f'Could not download {name}')
                     self.publish(f"{self.client_id}/status", {"msg": f'update failed for {name}', "is_err_msg": True, "origin": "OTA_Update"})
             except Exception as e:
-                self.event.log('F', f'Update failed for {name} - {e}')
+                self.ota_event.log('F', f'Update failed for {name} - {e}')
                 self.publish(f"{self.client_id}/status", {"msg": f'update error for {name}: {e}', "is_err_msg": True, "origin": "OTA_Update"})
 
         if isinstance(module_name, list):
@@ -222,7 +223,7 @@ class MQTTHandler:
                 self.publish(f"{self.client_id}/status", {"msg": f"update", "progress": perc, "is_err_msg": False, "origin": "OTA_Update"}, use_raw_string=True)
             
             self.publish(f"{self.client_id}/status", {"msg": "OTA-Update done! Will now reboot...", "is_err_msg": False, "origin": "OTA_Update"})       
-            self.event.log('I', 'Update done. Will now reboot ...')
+            self.ota_event.log('I', 'Update done. Will now reboot ...')
             import machine
             machine.reset()
         

@@ -23,7 +23,7 @@ versions = {
     'mqtt_handler': mqtt_handler,
     'Led_controller': led_controller,
     'logger': logger,
-    'main': [7,1,1, 'a'],
+    'main': [7,1,2],
     'Platform': platform
     }
 
