@@ -182,8 +182,6 @@ class MQTTHandler:
             module_name = [
                 'main.py',
                 'LightControl.py',
-                'PicoClient.py',
-                'PicoWifi.py',
                 'uWifi.py',
                 'mqtt_Client.py'
                 'mqtt_handler.py',
