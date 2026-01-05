@@ -1,6 +1,6 @@
 # Smarthome Order-Modul by vwall
 
-version = [7,0,1,'a']
+version = [7,0,1,'b']
 
 import json
 from LightControl import LC as LightControl
@@ -174,7 +174,7 @@ class Proc:
     def get_log(self):
         path = f'/log/{self.data['module']}.log'
         logs = event.get_log(str(path))
-        return self.make_result(msg=logs, is_error=False, origin='admin')
+        return self.make_result(msg=logs, is_error=False, origin='logger')
     
     def set_mqtt(self):
         broker = self.data['broker']
