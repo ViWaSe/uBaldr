@@ -9,7 +9,7 @@ from Led_controller import version as led_controller
 from logger import version as logger
 import sys
 
-version = [1,3,1]
+version = [1,3,1, 'a']
 
 platform = sys.platform
 
@@ -24,7 +24,7 @@ versions = {
     'Led_controller': led_controller,
     'logger': logger,
     'main': [7,1,2],
-    'Platform': platform
+    'Platform': str(platform)
     }
 
 def by_module(module):
@@ -40,6 +40,7 @@ def by_module(module):
 def all():
     return versions
 
+# Under construction:
 def compatibility_check():
     release_code=20251007
     pass

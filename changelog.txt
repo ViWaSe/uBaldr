@@ -2,9 +2,25 @@
 
 - changelog -
 
+# Content:
+- json_config_parser v2.2.0
+- Led_controller v1.1.0
+- LightControl v7.7.0
+- logger v3.1.1
+- mqtt_handler v2.2.0
+- ntp_simple v3.1.2
+- mqtt_Client v7.1.2
+- uWifi v7.1.1
+- order v7.0.1a
+- hex_to_rgb v1.0.0
+- versions v1.2.0
+
+# Used 3rd party modules:
+- umqtt_simple
+
 # New Functions:
 
-> Changed the PiciWifi-Module to uWifi. Improved the code and changed the behavior:
+> Renamed the PiciWifi-Module to uWifi. Improved the code and changed the behavior:
     - To connect with a wifi, now a instance needs to be created with wifi = client(). You can call then the wifi.connect() Method to establish the connection.
     - It's now also possible to make the instance without having a JSON-Config-File. That makes the module usable in other projects
 
@@ -18,19 +34,32 @@
     - The changes are applied to all modules, means that it is not downward-compatible!
 
 > Major changes in NTP-Module:
-    - Moved the functions to a class for better handling
-    - Added the possibility to not use a JSON-Config file. The json_config_parser is only imported if JSON is used. This makes the module more flexible.
+    - changed the NTP module to ntp_simple to simplify and improved the timestamp-function
+    - Now the time is only synced once in the mqtt_client-module and RTC is set. Logger uses only RTC.
+    - Added possibility to backup offline-time. This fixes the issue, that on every reboot the time is lost
 
-> Changes in json_config_parser:
+> json_config_parser:
     - Added Exeption for OS-Error and Option to create a new file in case, the wanted one does not exist: If this option is turned on, a new, empty JSON-File is created.
       The purpose of that is to make it possible to create new JSON-Config-Files. If the option is turned off, an Error is returned instead of crashing the program.
+> Renamed the PicClient-Module to mqtt_Client
+
+> mqtt_handler v2.2.0:
+    - Added /log -topic, used only for logs
+    - Added /update -topic, used only for update status-messages
+    - Fixed wrong logfile-name for OTA-Update (Now OTA.log)
+
 
 # Removed functions:
 
 
 # Bugfixes:
-    uWifi:
-        - Added an exeption to the connect-function to avoid the program to exit if it tries to connect and wifi chip is noch active.
+    uWifi (v7.1.1):
+        - [Major] Added an exeption to the connect-function to avoid the program to exit if it tries to connect and wifi chip is not active yet.
+        - [Minor] fixed the issue that a "UNKNOWN ERROR" was logged when the status was "1010 - STAT_GOT_IP" on a ESP-32 - Added the ESP-32 error codes to the error-handler
+    logger (v3.1.2):
+        - [Minor] fixed the issue that NTP timestamp was incorrect / not working. NTP-Time is now initiated with boot in mqtt_Client.py and set to the RTC and logger only uses the RTC-time.
+        - [Minor] fixed the issue that the first log-message is added to the first line instead of insert a line break first 
+    mqtt_Client (v7.1.2)
+        - [Major] ESP32-S3: fixed the issue that the ESP32 exited the program by an exception in the umqtt_simple-module when it was not possible to reconnect (i.E. connection to broker lost).
 
-> Problem with NTP-Timestamp:
-	
+# Known issues:

@@ -4,7 +4,7 @@
 # The incoming orders are processed and executed by order.py and the answer is published to the status-topic
 # Settings stored in config.json
 
-version = [7,0,1]
+version = [7,1,2]
 
 import utime as time
 from mqtt_handler import MQTTHandler
@@ -22,7 +22,7 @@ ntp = NTP(
     use_json_config=True,
     time_setting_file='/params/time_setting.json'
 )
-ok, msg = ntp.sync()
+ok, msg = ntp.boot()
 print(f'[ INFO ] {msg}')
 
 led_onboard = Client.get_led()
@@ -129,5 +129,9 @@ def go():
         
         except Exception as e:
             event.log('E', f'MQTT connection lost! - {e}')
-            mqtt.reconnect()
-    
+            try:
+                mqtt.reconnect()
+            except Exception as e:
+                event.log('E', f'Failed to reconnect! [Error: {e}] Reboot...')
+                import machine
+                machine.reset()    

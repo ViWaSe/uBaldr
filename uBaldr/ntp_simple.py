@@ -20,12 +20,12 @@ class NTP:
 
         if use_json_config:
             from json_config_parser import config
-            self.cfg = config(time_setting_file, layers=1)
+            self.settings = config(time_setting_file, layers=1)
 
-            self.GMT_offset = self.cfg.get('GMT_offset') or GMT_offset
-            self.use_winter_time = self.cfg.get('use_winter_time') or use_winter_time
+            self.GMT_offset = self.settings.get('GMT_offset') or GMT_offset
+            self.use_winter_time = self.settings.get('use_winter_time') or use_winter_time
         else:
-            self.cfg = None
+            self.settings = None
             self.GMT_offset = GMT_offset
             self.use_winter_time = use_winter_time
 
@@ -64,10 +64,10 @@ class NTP:
         Restore RTC from JSON backup if available.
         """
 
-        if not self.cfg:
+        if not self.settings:
             return False, "No JSON config available"
 
-        tm = self.cfg.get('offline_time')
+        tm = self.settings.get('offline_time')
         if not tm:
             return False, "No offline_time stored"
 
@@ -119,5 +119,5 @@ class NTP:
         ))
 
     def _save_backup(self, tm):
-        if self.cfg:
-            self.cfg.save_param(param='offline_time', new_value=list(tm))
+        if self.settings:
+            self.settings.save_param(param='offline_time', new_value=list(tm))

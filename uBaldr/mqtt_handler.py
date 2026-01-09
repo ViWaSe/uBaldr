@@ -1,6 +1,6 @@
 # New MQTT-Handler Module for Baldr V6.x
 
-version = [2,1,0, 'd']
+version = [2,2,0]
 
 from umqtt_simple import MQTTClient
 import utime as time
@@ -44,7 +44,7 @@ class MQTTHandler:
         self.received = False
 
         self.event = logger.Create('MQTT_Handler', '/log/')
-        self.ota_event = logger.Create('watchdog', '/log/')
+        self.ota_event = logger.Create('OTA', '/log/')
 
     def connect(self):
         """
@@ -83,11 +83,15 @@ class MQTTHandler:
             ans = run(in_message)
             
             if ans:
+                if ans.get('origin') == 'log':
+                    topic = f'{self.client_id}/status/log'
+                else:
+                    topic = f'{self.client_id}/status'
                 if ans == 'conn_lost':
                     self.event.log('I', 'Broker is offline under normal conditions. Trying to reconnect...')
                     self.reconnect()
                 else:
-                    self.publish(f"{self.client_id}/status", ans)
+                    self.publish(f'{topic}', ans)
             if not ans:
                 ans = '>> No order processing <<'
 
@@ -101,7 +105,7 @@ class MQTTHandler:
         if self.client:
             self.client.subscribe(topic)
             self.event.log('I', f'Subscribed to {topic}')
-            self.publish(f"{self.client_id}/status", {"msg": "online", "is_err_msg": False, "origin": "mqtt_handler"})
+            self.publish(f'{self.client_id}/status', {"msg": "online", "is_err_msg": False, "origin": "mqtt_handler"})
 
     # Publish-function
     def publish(
@@ -182,10 +186,10 @@ class MQTTHandler:
         if module_name == 'all':
             module_name = [
                 'main.py',
+                'mqtt_handler.py'
                 'LightControl.py',
                 'uWifi.py',
                 'mqtt_Client.py',
-                'mqtt_handler.py',
                 'order.py',
                 'logger.py',
                 'Led_controller.py',
@@ -202,13 +206,13 @@ class MQTTHandler:
                     with open(name, "w") as f:
                         f.write(response.text)
                     self.ota_event.log('I', f'{name} updated successfully')
-                    self.publish(f"{self.client_id}/status", {"msg": f'{name} update was successful!', "is_err_msg": False, "origin": "OTA_Update"})
+                    self.publish(f"{self.client_id}/status/update", {"msg": f'{name} update was successful!', "is_err_msg": False, "origin": "OTA_Update"})
                 else:
                     self.ota_event.log('E', f'Could not download {name}')
-                    self.publish(f"{self.client_id}/status", {"msg": f'update failed for {name}', "is_err_msg": True, "origin": "OTA_Update"})
+                    self.publish(f"{self.client_id}/status/update", {"msg": f'update failed for {name}', "is_err_msg": True, "origin": "OTA_Update"})
             except Exception as e:
                 self.ota_event.log('F', f'Update failed for {name} - {e}')
-                self.publish(f"{self.client_id}/status", {"msg": f'update error for {name}: {e}', "is_err_msg": True, "origin": "OTA_Update"})
+                self.publish(f"{self.client_id}/status/update", {"msg": f'update error for {name}: {e}', "is_err_msg": True, "origin": "OTA_Update"})
 
         if isinstance(module_name, list):
             anz = len(module_name)
@@ -220,12 +224,12 @@ class MQTTHandler:
                 # send update progress to the broker
                 act += 1
                 perc = round((act/anz*100),0)
-                self.publish(f"{self.client_id}/status", {"msg": f"update", "progress": perc, "is_err_msg": False, "origin": "OTA_Update"}, use_raw_string=True)
+                self.publish(f"{self.client_id}/status/update", {"msg": f"update", "progress": perc, "is_err_msg": False, "origin": "OTA_Update"}, use_raw_string=True)
             
-            self.publish(f"{self.client_id}/status", {"msg": "OTA-Update done! Will now reboot...", "is_err_msg": False, "origin": "OTA_Update"})       
+            self.publish(f"{self.client_id}/status/update", {"msg": "OTA-Update done! Will now reboot...", "is_err_msg": False, "origin": "OTA_Update"})       
             self.ota_event.log('I', 'Update done. Will now reboot ...')
             import machine
             machine.reset()
         
         else:
-            self.publish(f"{self.client_id}/status", {"msg": "No module updated. Please send the modules in list-format! Try the provided string from github.", "is_err_msg": True, "origin": "OTA_Update"})
+            self.publish(f"{self.client_id}/status/update", {"msg": "No module updated. Please send the modules in list-format! Try the provided string from github.", "is_err_msg": True, "origin": "OTA_Update"})
