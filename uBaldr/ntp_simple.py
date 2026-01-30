@@ -1,5 +1,5 @@
 # ntp_simple.py
-Version = [3, 1, 0]
+Version = [3, 1, 1]
 
 import time
 import machine
@@ -14,6 +14,23 @@ class NTP:
         use_winter_time=False,
         GMT_offset=3600
     ):
+        
+        """
+        Parameters:
+            use_json_config(bool): Use a config json-file to store the time settings.
+            time_settings_file(str): The path to the used json-file, if used.
+            use_winter_time(bool): Use winter time offset.
+            GMT_offset(int): GMT time offset in seconds. Default is 3600.
+
+        Methods:
+        --------
+            sync(self, timeout=2): Sync time via NTP and set RTC.
+            restore_from_backup(self): Restore backup-time from the json-file, if used.
+            boot(self): This method first tries to sync time via NTP, or from json if NTP fails.
+            now(self): Returns timestamp as YYYY-MM-DD | HH:MM:ss
+            _set_rtc(self, tm): Sets RTC-time
+            _save_backup(self, tm): Saves current time in the json-file, if used
+        """
 
         self.time_setting_file = time_setting_file
         self.use_json_config = use_json_config
@@ -44,18 +61,18 @@ class NTP:
             ntptime.settime()
             time.sleep(timeout)
         except Exception as e:
-            return False, f"NTP failed: {e}"
+            return False, f'NTP failed: {e}'
 
         t = time.time() + self.GMT_offset
         tm = time.localtime(t)
 
         if tm[0] < 2022:
-            return False, "Invalid time after NTP sync"
+            return False, 'Invalid time after NTP sync'
 
         self._set_rtc(tm)
         self._save_backup(tm)
 
-        return True, "RTC synced via NTP"
+        return True, 'RTC synced via NTP'
 
     # --------------------------------------------------
 
@@ -65,17 +82,17 @@ class NTP:
         """
 
         if not self.settings:
-            return False, "No JSON config available"
+            return False, 'No JSON config available'
 
         tm = self.settings.get('offline_time')
         if not tm:
-            return False, "No offline_time stored"
+            return False, 'No offline_time stored'
 
         if tm[0] < 2022:
-            return False, "Stored offline_time invalid"
+            return False, 'Stored offline_time invalid'
 
         self._set_rtc(tm)
-        return True, "RTC restored from backup"
+        return True, 'RTC restored from backup'
 
     # --------------------------------------------------
 
@@ -92,17 +109,13 @@ class NTP:
         if ok:
             return ok, msg
 
-        return False, "No valid time source available"
+        return False, 'No valid time source available'
 
     # --------------------------------------------------
 
     def now(self):
         tm = machine.RTC().datetime()
-        return (
-            f"{tm[0]}-{tm[1]:02d}-{tm[2]:02d}|"
-            f"{tm[4]:02d}:{tm[5]:02d}:{tm[6]:02d}"
-        )
-
+        return f'{tm[0]}-{tm[1]:02d}-{tm[2]:02d} | {tm[4]:02d}:{tm[5]:02d}:{tm[6]:02d}'
     # --------------------------------------------------
     # internals
 
