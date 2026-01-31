@@ -1,11 +1,7 @@
-version = [3,1,3]
+version = [3,2,1]
 
 import os
 import time
-
-def _timestamp():
-    tm = time.localtime()
-    return f"{tm[0]}-{tm[1]:02d}-{tm[2]:02d}|{tm[3]:02d}:{tm[4]:02d}:{tm[5]:02d}"
 
 class Create:
 
@@ -14,6 +10,7 @@ class Create:
             file_name,
             dir,
             max_size=4096,
+            max_files=3
     ):
         
         """
@@ -21,6 +18,7 @@ class Create:
             file_name (str): Name of the Logfile without extension: 'name' -> 'name.log'
             dir (str): Location of the Logfile
             max_size (int): Max size of the Logfile. Content will be deleted when this size is reached.
+            max_files (int): Number of rotated files to keep
 
         Methods:
         --------
@@ -29,17 +27,17 @@ class Create:
             check_and_clear(): Checks the filesize and clears the logfile if max_size is exceeded.
         """
 
-        self.file = str(f'{file_name}.log')
-        self.dir = dir
+        self.file_name = file_name
+        self.dir = dir.rstrip('/')
         self.max_size = max_size
+        self.max_files = max_files
+
+        self.file = f'{file_name}.log'
         self.filepath = str(f'{self.dir}/{self.file}')
 
-        try:
-            with open(self.filepath, 'r'):
-                pass
-        except OSError:
-            with open(self.filepath, 'w') as f:
-                f.write(f'***   LOGGER V{str(version)} | File={str(self.filepath)}   ***')
+        self._ensure_file()
+
+    # --------------------------------------------------------------------------------------------------
 
     def log(self, level, event):
         """
@@ -55,20 +53,58 @@ class Create:
         'F': '[  FATAL ]',
         'N': '[  N/A   ]'
     }
-        self.check_and_clear()
         loglevel = LOG_LEVEL.get(level)
 
         with open(self.filepath, 'a') as file:
-            file.write(f'\n{_timestamp()} >>> {loglevel}: {str(event)}')
-    
-    def check_and_clear(self):
-        global version
+            file.write(f'\n{self._timestamp()} >>> {loglevel}: {str(event)}')
 
-        size = os.stat(self.filepath)[6]
-        if size > self.max_size:
-            with open(self.filepath, 'w') as f:
-                f.write(f'***   LOGGER V{str(version)} | File={str(self.filepath)}   ***')
+        self._rotate()
+
+    # internals-----------------------------------------------------------------------------------------
     
+    def _ensure_file(self):
+        try:
+            os.stat(self.filepath)
+        except OSError:
+            with open(self.filepath, 'w') as f:
+                f.write(f"*** LOGGER V{version} | {self.filepath} ***")
+    
+    def _rotate(self):
+        try:
+            size = os.stat(self.filepath)[6]
+        except OSError:
+            return
+        
+        if size < self.max_size:
+            return
+        
+        # delete oldest
+        oldest = f'{self.filepath}.{self.max_files}'
+        try:
+            os.remove(oldest)
+        except OSError:
+            pass
+        
+        # shift files
+        for i in range(self.max_files -1, 0, -1):
+            src = f'{self.filepath}.{i}'
+            dst = f'{self.filepath}.{i + 1}'
+            try:
+                os.rename(src, dst)
+            except OSError:
+                pass
+
+        # rotate current
+        try: 
+            os.rename(self.filepath, f'{self.filepath}.1')
+        except OSError:
+            pass
+
+        # create new base file
+        with open(self.filepath, 'w') as f:
+            f.write(f'*** LOGGER V{version} | {self.filepath} ***')
+
+# TODO: return the wanted logfile or merge all
     def get_log(self, filepath):
         try:
             with open(filepath, 'r') as f:
@@ -76,6 +112,10 @@ class Create:
             return content
         except OSError as e:
             return f'Extraction of logs failed! - {e}'
+    
+    def _timestamp(self):
+        tm = time.localtime()
+        return f"{tm[0]}-{tm[1]:02d}-{tm[2]:02d}|{tm[3]:02d}:{tm[4]:02d}:{tm[5]:02d}"
 
 class DummyLogger:
     def log(self, *args, **kwargs):
