@@ -1,6 +1,6 @@
 # New MQTT-Handler Module for Baldr V6.x
 
-version = [2,2,0]
+version = [2,2,3]
 
 from umqtt_simple import MQTTClient
 import utime as time
@@ -51,7 +51,7 @@ class MQTTHandler:
         Establish the MQTT-Connection
         """
         try:
-            self.client = MQTTClient(self.client_id, self.broker, user=self.user, password=self.password)
+            self.client = MQTTClient(self.client_id, self.broker, user=self.user, password=self.password, keepalive=20)
             self.client.set_callback(self.on_message)
             self.client.set_last_will(topic=f"{self.client_id}/status", msg='offline', retain=True)
             self.client.connect()
@@ -83,7 +83,7 @@ class MQTTHandler:
             ans = run(in_message)
             
             if ans:
-                if ans.get('origin') == 'log':
+                if ans.get('origin') == 'logger':
                     topic = f'{self.client_id}/status/log'
                 else:
                     topic = f'{self.client_id}/status'
@@ -151,10 +151,17 @@ class MQTTHandler:
     
     def reconnect(self):
         self.event.log('I', 'Attempting to reconnect...')
-        self.disconnect() 
-        while not self.connect(): 
-            self.event.log('E', 'Reconnect failed, retrying in 5 seconds...')
-            time.sleep(5) 
+        try:
+            self.disconnect()
+        except:
+            pass
+        while True: 
+            try: 
+                self.connect()
+                break
+            except Exception as e:
+                self.event.log('E', 'Reconnect failed, retrying in 5 seconds...')
+                time.sleep(5) 
         self.event.log('I', 'Reconnected successfully!')
         self.subscribe(self.subscribed_topic)
     
