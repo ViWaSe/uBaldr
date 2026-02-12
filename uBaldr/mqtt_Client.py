@@ -4,7 +4,7 @@
 # The incoming orders are processed and executed by order.py and the answer is published to the status-topic
 # Settings stored in config.json
 
-version = [7,1,2]
+version = [7,1,5]
 
 import utime as time
 from mqtt_handler import MQTTHandler
@@ -13,6 +13,7 @@ from json_config_parser import config
 from ntp_simple import NTP
 import logger
 import sys
+import gc
 
 # Connect to WLAN using PicoWifi-Module
 wlan = Client()
@@ -58,7 +59,7 @@ mqtt = MQTTHandler(
 )
 
 event = logger.Create('Client', '/log')
-wd_event = logger.Create('Watchdog', '/log')
+wd_event = logger.Create('Watchdog', '/log', 1024)
 
 # Watchdog-function to check the connection to the broker
 def watchdog(
@@ -118,8 +119,10 @@ def go():
         if not mqtt.connect():
             time.sleep(5)
             continue
-
-        mqtt.subscribe(f'{mqttClient}/order')
+        try:
+            mqtt.subscribe(f'{mqttClient}/order')
+        except Exception as e:
+            event.log ('E', f'Failed to subscribe after successfull connect: {e}')
         
         try:
             while True:
@@ -130,6 +133,7 @@ def go():
         except Exception as e:
             event.log('E', f'MQTT connection lost! - {e}')
             try:
+                gc.collect()
                 mqtt.reconnect()
             except Exception as e:
                 event.log('E', f'Failed to reconnect! [Error: {e}] Reboot...')
