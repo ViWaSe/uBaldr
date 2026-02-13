@@ -1,4 +1,4 @@
-version = [3,2,1]
+version = [3,3,1]
 
 import os
 import time
@@ -10,7 +10,8 @@ class Create:
             file_name,
             dir,
             max_size=4096,
-            max_files=3
+            max_files=3,
+            loglevel='0'
     ):
         
         """
@@ -19,6 +20,7 @@ class Create:
             dir (str): Location of the Logfile
             max_size (int): Max size of the Logfile. Content will be deleted when this size is reached.
             max_files (int): Number of rotated files to keep
+            loglevel (int): 0=F/E, 1=F/E/W, 2=F/E/W/I
 
         Methods:
         --------
@@ -31,6 +33,7 @@ class Create:
         self.dir = dir.rstrip('/')
         self.max_size = max_size
         self.max_files = max_files
+        self.loglevel = loglevel
 
         self.file = f'{file_name}.log'
         self.filepath = str(f'{self.dir}/{self.file}')
@@ -53,10 +56,21 @@ class Create:
         'F': '[  FATAL ]',
         'N': '[  N/A   ]'
     }
-        loglevel = LOG_LEVEL.get(level)
+        event_level = LOG_LEVEL.get(level)
 
-        with open(self.filepath, 'a') as file:
-            file.write(f'\n{self._timestamp()} >>> {loglevel}: {str(event)}')
+        if self.loglevel == 0:
+            if level == 'E' or level == 'F':
+                with open(self.filepath, 'a') as file:
+                    file.write(f'\n{self._timestamp()} >>> {event_level}: {str(event)}')
+            else: pass
+        elif self.loglevel == 1:
+            if level == 'E' or level == 'F' or level == 'W':
+                with open(self.filepath, 'a') as file:
+                    file.write(f'\n{self._timestamp()} >>> {event_level}: {str(event)}')
+            else: pass
+        elif self.loglevel == 2:
+            with open(self.filepath, 'a') as file:
+                file.write(f'\n{self._timestamp()} >>> {event_level}: {str(event)}')
 
         self._rotate()
 
