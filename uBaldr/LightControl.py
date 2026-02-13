@@ -5,7 +5,7 @@
 # NOTE: The "type: ignore" commtents are for the vs-code micropico extension only! The main reason is that the values from the JSON-File are unknown
 # NOTE: For WW/CW LEDs (24V): setting bpp = 3 is required (Byte 0=warm, 1=cold, 2=not used)
 
-version=[7,0,0]
+version=[7,2,2]
 
 import utime as time
 from neopixel import NeoPixel
@@ -86,39 +86,84 @@ class LightControl:
         self.led = Pin(self.led_pin, Pin.OUT, value=0)
         self.np: Any = NeoPixel(self.led, self.pixel, bpp=self.bpp) # type: ignore # type
 
+        # Set save-timer
+        self.last_change = 0
+        self.need_save = False
+
         if self.autostart:
             self.set_dim(self.dim_status)
 
-    # static color (also used by dim)
-    def static(
-            self, 
-            color, 
-            level=1
-            ):
+        # static color (also used by dim)
+
+    # Internals -----------------------------------------------------------------------------------------
+
+    def _static(self, color, level=None):
+        """
+        Sets all pixels to a specific color and brightness level.
+            
+        Parameters:
+            color (list/tuple): RGB or RGBW values.
+            level (float): 0.0 to 1.0. If None, self.level is used.
+        """
+
+        if level is None:
+            level = self.level
+                
         color = list(color)
         while len(color) < 4:
             color.append(0)
-        for i in range(self.pixel):
-            self.np[i] = ( 
-                int(color[0] * level),
-                int(color[1] * level),
-                int(color[2] * level),
-                int(color[3] * level)
-            )
-        self.np.write()
-        self.cache = color
-        return color
+                
+        dimmed_color = tuple(int(c * level) for c in color)
 
-    def clear(self):
+        for i in range(self.pixel):
+            self.np[i] = dimmed_color
+
+        self.np.write()
+
+        self.cache = color
+
+    def _clear(self):
         for i in range(self.pixel):
             self.np[i] = (0, 0, 0, 0) 
         self.np.write()
 
-    # Dim functions
+    def _ramp_up(
+            self, 
+            actual, 
+            target, 
+            speed,
+            steps=2
+            ):
+        while actual < target:
+            actual += steps
+            if actual > target:
+                actual = target
+            self.level = actual / 100
+            self._static(self.cache, self.level)
+            time.sleep_ms(speed)
+
+    def _ramp_down(
+            self, 
+            actual, 
+            target, 
+            speed,
+            steps=2
+            ):
+        while actual > target:
+            actual -= steps
+            if actual < target:
+                actual = target
+            self.level = actual / 100
+            self._static(self.cache, self.level)
+            time.sleep_ms(speed)
+
+    # Dim function --------------------------------------------------------------------------------------
+
     def set_dim(
             self, 
             target, 
-            speed=1
+            speed=1,
+            steps=2
             ):
         
         """
@@ -135,40 +180,16 @@ class LightControl:
             return
 
         if target > actual:
-            self._ramp_up(actual, target, speed)
+            self._ramp_up(actual, target, speed, steps)
         else:
-            self._ramp_down(actual, target, speed)
+            self._ramp_down(actual, target, speed, steps)
 
-        self.status.save_param(param='dim_status', new_value=target)
+        self.last_change = time.time()
+        self.needs_save = True
+        return True
 
-    def _ramp_up(
-            self, 
-            actual, 
-            target, 
-            speed
-            ):
-        while actual < target:
-            actual += 1
-            if actual > target:
-                actual = target
-            self.level = actual / 100
-            self.static(self.cache, self.level)
-            time.sleep_ms(speed)
+    # Color functions --------------------------------------------------------------------------------------
 
-    def _ramp_down(
-            self, 
-            actual, 
-            target, 
-            speed
-            ):
-        while actual > target:
-            actual -= 1
-            if actual < target:
-                actual = target
-            self.level = actual / 100
-            self.static(self.cache, self.level)
-            time.sleep_ms(speed)
-    
     # set single pixel
     def single(
             self, 
@@ -189,7 +210,7 @@ class LightControl:
                 int(color[3] * light_level)
             )
             self.np.write()
-        except:
+        except IndexError:
             pass
 
     # set color by line animation
@@ -240,7 +261,8 @@ class LightControl:
                 line -= gap
                 time.sleep_ms(speed)
         self.cache = color
-        self.status.save_param(param='color', new_value=color)
+        self.last_change = time.time()
+        self.needs_save = True
         return color
     
     # set Color by soft transition
@@ -272,25 +294,49 @@ class LightControl:
                 for i in range(4) 
             ]
         
-            self.static(intermediate, self.level)
+            self._static(intermediate, self.level)
             time.sleep_ms(speed)
         
         self.cache = target
-        self.status.save_param(param='color', new_value=target)
+        self.last_change = time.time()
+        self.needs_save = True
         return target
+    
+# Utils ------------------------------------------------------------------------------------------------
 
     def change_autostart(self, value):
         self.status.save_param(param='autostart', new_value=value)
     
     def change_pixel_qty(self, value):
         self.status.save_param(param='led_qty', new_value=value)
+    
+    def get_info(self):
+        return {"version": version, "led_qty": self.pixel_qty, "led_pin": self.led_pin, "color": self.cache, "light_level": self.dim_status}
+    
+    def check_save(self, force=False):
+        if force or (self.need_save and (time.time() - self.last_change) > 5):
+            self.status.save_param(param='color', new_value=self.cache)
+            self.status.save_param(param='dim_status', new_value=int(self.level * 100))
+            self.need_save = False
 
-    def ret_dim(self):
-        return self.status.get(param='dim_status')
+# Auto-initialize LEDs
+LC = LightControl()
 
-LC = LightControl()     # For standalone usage
-
-# Examples:
-# LC = LightControl()
-# LC.set_dim(80, 10) --> Dim to level 80% with 10ms pause between levels
-# LC.line([200,0,0]) --> Set color rgb(255,0,0) by line animation
+"""
+def set_smooth(self, target_color, speed=10, steps=50):
+    current = list(self.cache)
+    target = list(target_color)
+    while len(target) < 4: target.append(0)
+    
+    # Vorbereiten der Differenzen spart Rechenzeit in der Schleife
+    diffs = [target[i] - current[i] for i in range(4)]
+    
+    for step in range(1, steps + 1):
+        # Ganzzahl-Arithmetik für Geschwindigkeit
+        intermediate = [
+            int(current[i] + (diffs[i] * step // steps))
+            for i in range(4)
+        ]
+        self.static(intermediate, self.level)
+        time.sleep_ms(speed)
+"""

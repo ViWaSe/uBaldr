@@ -1,19 +1,26 @@
 # Smarthome Order-Modul by vwall
 
-version = [7,0,1,'b']
+version = [7,2,1]
 
 import json
 from LightControl import LC as LightControl
 import logger
-from hex_to_rgb import hex_to_rgb
 
 event = logger.Create('order', '/log')
 
 class Proc:
-    def __init__(self, data=None):
+    def __init__(self, data=None, settings_obj=None):
         if data is None:
             raise ValueError("Data error.")
         self.data = data
+        self.command = data.get('command', '')
+        self.dir = data.get('dir', 0)
+        self.speed = data.get('speed', 5)
+        self.steps = data.get('steps', 50)
+        self.new_value = data.get('new_value', '')
+        self.settings = settings_obj
+    
+    # Make result / answer message ------------------------------------------------------------------------------------
     
     def make_result(
             self,
@@ -23,54 +30,51 @@ class Proc:
     ):
         return {"msg": msg, "is_err_msg": is_error, "origin": origin}
     
-    # LightControl-functions
+    # LightControl-functions -----------------------------------------------------------------------------------------
+    
     def LC(self):
-        command = self.data['command']
-        payload = self.data['payload']
-
-        if 'dir' in self.data:
-            dir = self.data['dir']
-        else:
-            dir=0
+        payload = self.data.get('payload')
+        color = [0, 0, 0] # fallback
         
         if isinstance(payload, list):
             color = payload
         if isinstance(payload, str):
             try:
-                color = hex_to_rgb(str(payload))
+                color = self.hex_to_rgb(str(payload))
             except ValueError:
                 return self.make_result('Failed! Payload is not list or hex!', is_error=True, origin='LightControl')
-        
-        if 'speed' in self.data:
-            speed   = self.data['speed']
-        else:
-            speed = 5
-        
-        if 'steps' in self.data:
-            steps = self.data['steps']
-        else:
-            steps = 50
 
         command_map = {
-            'dim': lambda: LightControl.set_dim(payload, speed),
-            'line': lambda: LightControl.line(color, speed, dir),
-            'smooth': lambda: LightControl.set_smooth(color, speed, steps) 
+            'dim': lambda: LightControl.set_dim(payload, self.speed),
+            'line': lambda: LightControl.line(color, self.speed, self.dir),
+            'smooth': lambda: LightControl.set_smooth(color, self.speed, self.steps),
+            'get_info': lambda: LightControl.get_info()
         }
         
-        if command in command_map:
-            command_map[command]()
-            return self.make_result(msg=True, is_error=False, origin='LightControl')
+        if self.command in command_map:
+            result = command_map[self.command]()
+            return self.make_result(msg=result, is_error=False, origin='LightControl')
         else:
-            event.log('E', f'Command >>{command}<< not found!')
+            event.log('E', f'Command >>{self.command}<< not found!')
             return self.make_result(msg='Command not found!', is_error=True, origin='LightControl')
 
-    # Admin-Functions
+    # Utils ---------------------------------------------------------------------------------------------------------    
+    
+    def hex_to_rgb(self, hex):
+        rgb = []
+        for i in (0, 2, 4):
+            decimal = int(hex[i:i+2], 16)
+            rgb.append(decimal)
+        return tuple(rgb)
+        
+    # Admin functions ------------------------------------------------------------------------------------------------
+    
     def admin(self):
+        from mqtt_Client import settings as mqtt_settings
+        self.mqtt_settings = mqtt_settings
 
-        command = self.data['command']
-
-        if 'new_value' in self.data:
-            new_value = self.data['new_value']
+        command = self.command
+        new_value = self.new_value
 
         command_map = {
             'echo': lambda: self.echo(),
@@ -83,15 +87,22 @@ class Proc:
             'get_log': lambda: self.get_log(),
             'set_GMT_wintertime': lambda: self.change_GMT_time(new_value),
             'set_GMT_offset': lambda: self.change_GMT_time(new_value),
-            'get_timestamp': lambda: self.get_timestamp(),
             'reboot': lambda: self.reboot(),
             'get_sysinfo': lambda: self.get_sysinfo(),
             'onboard_led_active': lambda: self.onboard_led_active(new_value),
-            'publish_in_json': lambda: self.pinjson(new_value)
+            'publish_in_json': lambda: self.pinjson(new_value),
+            'change_client': lambda: self.change_client(new_value),
+            'get_config': lambda: self.return_conf()
         }
         
         return command_map.get(command, lambda: self.make_result(msg=f'Command not found: {command}', is_error=True, origin="command_handler"))()
     
+    def return_conf(self):
+        pass
+    def change_client(self, new_name):
+        self.mqtt_settings.save_param(group='MQTT-config', param='Client', new_value=new_name)
+        pass
+
     def echo(self):
         return self.make_result(msg='alive', origin='admin')
     
@@ -99,10 +110,9 @@ class Proc:
         return self.make_result(msg='ok', origin='admin')
     
     def pinjson(self, value: bool):
-        from mqtt_Client import settings, publish_in_Json
+        publish_in_Json = self.mqtt_settings.get('MQTT-config', 'publish_in_json')
         if publish_in_Json != value:
-            settings.save_param(group='MQTT-config', param='publish_in_json', new_value=value)
-            publish_in_Json = value
+            self.mqtt_settings.save_param(group='MQTT-config', param='publish_in_json', new_value=value)
         return self.make_result(msg='Setting changed and takes effect after reboot.', is_error=False, origin='admin')
 
     # Log when Broker is offfline
@@ -125,12 +135,6 @@ class Proc:
         led_onboard = Client.get_led()
         led_onboard.set_active(new_state)
         return self.make_result(msg=f'onboard_led active setting -> {new_state}', is_error=False, origin='admin')
-    
-    # Get Timestamp from NTP-Module
-    def get_timestamp(self):
-        import NTP
-        time = NTP.NTP()
-        return self.make_result(msg=time.timestamp(), is_error=False, origin='admin/NTP')
     
     # Change NTP-Settings (Wintertime and GMT-Osffset)
     def change_GMT_time(
@@ -190,6 +194,8 @@ class Proc:
         conf.save_param('MQTT-config', 'PW', pw)
 
         return self.make_result(msg=f'Changed MQTT-Settings. New Broker: {broker} | New Client-Name: {client} The client will no longer be reachable via this broker after a reboot!')
+
+    # ----------------------------------------------------------------------------------------------------------------
 
 # Run a JSON-String
 def run(json_string):

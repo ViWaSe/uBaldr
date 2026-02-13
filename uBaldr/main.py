@@ -1,5 +1,5 @@
 # Simple script to start uBaldr
-version = [7,1,2]
+version = [7,2,1]
 
 from uWifi import Client
 import mqtt_Client as MQTT

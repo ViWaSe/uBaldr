@@ -4,7 +4,7 @@
 # The incoming orders are processed and executed by order.py and the answer is published to the status-topic
 # Settings stored in config.json
 
-version = [7,1,5]
+version = [7,1,5, 'a']
 
 import utime as time
 from mqtt_handler import MQTTHandler
@@ -14,6 +14,7 @@ from ntp_simple import NTP
 import logger
 import sys
 import gc
+from LightControl import LC
 
 # Connect to WLAN using PicoWifi-Module
 wlan = Client()
@@ -129,6 +130,7 @@ def go():
                 led_toggle()
                 mqtt.check_msg()
                 watchdog()
+                LC.check_save()
         
         except Exception as e:
             event.log('E', f'MQTT connection lost! - {e}')
