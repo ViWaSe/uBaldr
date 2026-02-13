@@ -11,7 +11,7 @@ class Create:
             dir,
             max_size=4096,
             max_files=3,
-            loglevel='0'
+            loglevel=0
     ):
         
         """
