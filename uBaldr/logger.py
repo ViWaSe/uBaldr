@@ -62,12 +62,10 @@ class Create:
             if level == 'E' or level == 'F':
                 with open(self.filepath, 'a') as file:
                     file.write(f'\n{self._timestamp()} >>> {event_level}: {str(event)}')
-            else: pass
         elif self.loglevel == 1:
             if level == 'E' or level == 'F' or level == 'W':
                 with open(self.filepath, 'a') as file:
                     file.write(f'\n{self._timestamp()} >>> {event_level}: {str(event)}')
-            else: pass
         elif self.loglevel == 2:
             with open(self.filepath, 'a') as file:
                 file.write(f'\n{self._timestamp()} >>> {event_level}: {str(event)}')

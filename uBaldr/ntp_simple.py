@@ -1,9 +1,10 @@
 # ntp_simple.py
-Version = [3, 1, 1]
+Version = [3,2,1]
 
 import time
 import machine
 import ntptime
+import gc
 
 
 class NTP:
@@ -41,10 +42,12 @@ class NTP:
 
             self.GMT_offset = self.settings.get('GMT_offset') or GMT_offset
             self.use_winter_time = self.settings.get('use_winter_time') or use_winter_time
+            self.timeserver = self.settings.get('NTP-host')
         else:
             self.settings = None
             self.GMT_offset = GMT_offset
             self.use_winter_time = use_winter_time
+            self.timeserver = 'ntp.ntsc.ac.cn'
 
         if self.use_winter_time:
             self.GMT_offset += 3600
@@ -58,6 +61,7 @@ class NTP:
         """
 
         try:
+            # ntptime.settime(server=self.timeserver)
             ntptime.settime()
             time.sleep(timeout)
         except Exception as e:
@@ -71,6 +75,7 @@ class NTP:
 
         self._set_rtc(tm)
         self._save_backup(tm)
+        gc.collect()
 
         return True, 'RTC synced via NTP'
 

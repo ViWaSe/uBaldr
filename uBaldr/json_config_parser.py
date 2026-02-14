@@ -2,9 +2,10 @@
 # Currently 1 and 2 layers are supported, 2 means that the file is structured like >>>{"Example-Group": [{"example param": "example string"], "example-Group 2": [{"Example int-data": 2, ...<<<
 # To parse a json-file, create a config()-Object and get the data you want with the get()-function. (t.ex example=config(file='example.json', layers=2) ==> example.get('group', 'param'))
 # Use the save-param()-function to save or update data the same way as getting it with the get()-function (t.ex. example.save_param('group', 'param', 'new value'))
-version = [2,2,0]
+version = [2,2,1]
 
 import json
+import gc
 
 class config(object):
 
@@ -57,6 +58,7 @@ class config(object):
         """
 
         try:
+            gc.collect()
             if self.layers==1:
                 return self.conf[param]
             elif self.layers==2:
@@ -91,11 +93,13 @@ class config(object):
 
         with open(self.file, 'w') as file:
             json.dump(self.conf, file)
+        gc.collect()
 
 # Save a python-lib to a json-file (or create a new file)
     def save_lib(self, lib, filename):
         with open(filename, 'w') as f:
             json.dump(lib, f)
+        gc.collect()
     
 def create(filename, content):
     newfile = open(filename, 'w')
