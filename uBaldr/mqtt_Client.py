@@ -4,7 +4,7 @@
 # The incoming orders are processed and executed by order.py and the answer is published to the status-topic
 # Settings stored in config.json
 
-version = [7,1,5, 'a']
+version = [7,1,6]
 
 import utime as time
 from mqtt_handler import MQTTHandler
@@ -41,15 +41,21 @@ publish_in_Json = settings.get('MQTT-config', 'publish_in_json')
 # Set the LED-Timer depending on the platform (pico or not)
 is_pico = sys.platform == 'rp2'
 if is_pico:
-    led_timer=600
+    led_timer=1200
 else:
-    led_timer=400
+    led_timer=800
 
 # Create empty variables for watchdog and for the led_toggle-function
 ledCount    = 0
 last_msg    = time.time()
 wd_counter  = 0
 watchdog_last_chk = 0
+
+# onboard-led variables
+led_state = 1
+last_change = 0
+ledCount = 0
+
 
 mqtt = MQTTHandler(
     client_id=mqttClient,
@@ -105,14 +111,23 @@ def watchdog(
 
 # Function for Onboard-LED as ok indicator and check connection
 def led_toggle(onTime=led_timer):
-    global ledCount
-    ledCount +=1
-    time.sleep_ms(1)
-    if ledCount >= onTime:
-        led_onboard.off()
-        time.sleep_ms(100)
-        led_onboard.on()
-        ledCount = 0
+    global led_state, last_change, ledCount
+
+    now = time.ticks_ms()
+
+    if led_state == 1:
+        # LED on (ontime)
+        if time.ticks_diff(now, last_change) >= onTime:
+            led_onboard.off()
+            led_state = 0
+            last_change = now
+
+    else:
+        # LED off (100ms)
+        if time.ticks_diff(now, last_change) >= 100:
+            led_onboard.on()
+            led_state = 1
+            last_change = now
     
 # Main - just call go() to start the Loop
 def go():
@@ -138,6 +153,8 @@ def go():
                 gc.collect()
                 mqtt.reconnect()
             except Exception as e:
-                event.log('E', f'Failed to reconnect! [Error: {e}] Reboot...')
-                import machine
-                machine.reset()    
+                event.log('W', f'MQTT-reconnect failed - Error: {e} Resetting network connection...')
+                wlan.disconnect()
+                wlan.connect()   
+
+
