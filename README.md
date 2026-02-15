@@ -46,6 +46,36 @@ The Topics are created from the client-name that is set in the config.json (MQTT
 You find everything you need to copy to your µPython-device in the uBaldr-Folder.
 Change the config.json and fill in your wifi-settings and MQTT-settings before start!
 
+# The coonfig.json file
+Configuration is stored in a JSON file, named config.json that is explained in that section. 
+## Wifi-config
+country:       Network country (only used for RPI)
+IP:            IP-Adress, can be empty, is created from uWifi.py
+PW:            Your Wifi-Password
+SSID:          Your Wifi-SSID
+Hostname:      Set a Hostname
+onboard_led:   Onboard-LED-Pin (default=21)
+led_inverted:  True, if you use a ESP-32-S3
+led_active:    Can be false if you don't want to use the status-LED
+
+## MQTT-config:
+Broker:            The Broker's IP-Adress
+Client:            Set a unique client name for each device -> Topics are created from that name
+md_pin:            Pin for sensor (currently not used)
+Port:              The MQTT Network-Port (1883 by default)
+PW:                MQTT Password, if needed
+User:              MQTT User, if needed
+publish_in_json:   Publish Messages in json-format? (true by default)
+
+## LightControl_settings
+autostart:        Set the LEDs to the last saved state when power on (true by default)
+bytes_per_pixel:  Set Bytes per pixel (i.e. 3 for RGB, 4 for RGBW, ...)
+led_pin:          LEDs Data-Pin
+led_qty:          Quantity of the used LEDs
+
+## Options
+This section is currently not used
+
 # OTA-Update
 To trigger an OTA-Update, send this JSON-String to the device/order Topic:
 >{
