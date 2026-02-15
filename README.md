@@ -19,28 +19,32 @@ JSON-Strings are used for communication. Please see documentation pdf for more i
 - NTP
 
 # Supported Hardware
-- uBaldr fully supports Raspberry PicoW and ESP32 Microcontrollers. Note that you need to change the onboard-led-settings depending on your device.
+- uBaldr fully supports Raspberry PicoW and ESP32-S3 Microcontrollers. Note that you need to change the onboard-led-settings depending on your device.
 - NeoPixel-LEDs are supported in RGB, RGBW and WW/CW Variants
 
 # Usage
-The Project works with 2 MQTT-Topics. device/order ist the order you send to the client. Messages from the client are published to device/status.
+The Project works with MQTT-Topics. <client>/order ist the order you send to the client. Messages from the client are published to <client>/status.
   - Example 1 - Set the color of your LED-Strip to rgb-red (255,0,0) by line-animation. You can set a speed (pause between pixels in ms).
-    - JSON-String to device/order:
+    - JSON-String to <client>/order:
     > {"sub_type": "LC", "command": "line", "payload": [255,0,0], "speed": 5}
     - Answer from device/status: True
   - Example 2 - dim the light to 5% with 1ms between %-steps
-    - JSON-String:
+    - JSON-String to <client>/order:
     > {"sub_type": "LC", "command": "dim", "payload": 5, "speed": 1}
     - Answer from device/status: True
   - You can also just send a command without parameters like speed. In this case dafault values are used.
   - There is also an /log-topic to get logfiles (device/status/log)
 
+# MQTT topics
+The Topics are created from the client-name that is set in the config.json (MQTT-Config -> Client).
+  - <client>/order: Used for commands to control thie client
+  - <client>/status: Status messages from the client
+  -   <client>/status/log: Used to return logs
+  -   <client>/status/update: Used for OTA-Update status, like progress
+
 # Micropython-Files
 You find everything you need to copy to your µPython-device in the uBaldr-Folder.
 Change the config.json and fill in your wifi-settings and MQTT-settings before start!
-
-# Documentaion
-I will add a full manual soon.
 
 # OTA-Update
 To trigger an OTA-Update, send this JSON-String to the device/order Topic:
@@ -51,5 +55,3 @@ To trigger an OTA-Update, send this JSON-String to the device/order Topic:
     "base_url": "https://raw.githubusercontent.com/ViWaSe/uBaldr/refs/heads/main/uBaldr/"
 }
 Note that the OTA-Update function is still under developement.
-
-Hope you enjoy my first project!
