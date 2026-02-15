@@ -5,7 +5,7 @@
 # NOTE: The "type: ignore" commtents are for the vs-code micropico extension only! The main reason is that the values from the JSON-File are unknown
 # NOTE: For WW/CW LEDs (24V): setting bpp = 3 is required (Byte 0=warm, 1=cold, 2=not used)
 
-version=[7,2,3]
+version=[7,2,4]
 
 import utime as time
 from neopixel import NeoPixel
@@ -88,7 +88,7 @@ class LightControl:
 
         # Set save-timer
         self.last_change = 0
-        self.need_save = False
+        self.needs_save = False
 
         if self.autostart:
             self.set_dim(self.dim_status)
@@ -322,3 +322,21 @@ class LightControl:
 # Auto-initialize LEDs
 LC = LightControl()
 
+"""
+def set_smooth(self, target_color, speed=10, steps=50):
+    current = list(self.cache)
+    target = list(target_color)
+    while len(target) < 4: target.append(0)
+    
+    # Vorbereiten der Differenzen spart Rechenzeit in der Schleife
+    diffs = [target[i] - current[i] for i in range(4)]
+    
+    for step in range(1, steps + 1):
+        # Ganzzahl-Arithmetik für Geschwindigkeit
+        intermediate = [
+            int(current[i] + (diffs[i] * step // steps))
+            for i in range(4)
+        ]
+        self.static(intermediate, self.level)
+        time.sleep_ms(speed)
+"""
