@@ -49,29 +49,29 @@ Change the config.json and fill in your wifi-settings and MQTT-settings before s
 # The coonfig.json file
 Configuration is stored in a JSON file, named config.json that is explained in that section. 
 ## Wifi-config
-country:       Network country (only used for RPI)
-IP:            IP-Adress, can be empty, is created from uWifi.py
-PW:            Your Wifi-Password
-SSID:          Your Wifi-SSID
-Hostname:      Set a Hostname
-onboard_led:   Onboard-LED-Pin (default=21)
-led_inverted:  True, if you use a ESP-32-S3
-led_active:    Can be false if you don't want to use the status-LED
+- country:   </b>    Network country (only used for RPI)
+- <b>IP:     </b>       IP-Adress, can be empty, is created from uWifi.py
+- <b>PW:      </b>      Your Wifi-Password
+- <b>SSID:      </b>    Your Wifi-SSID
+- <b>Hostname:   </b>   Set a Hostname
+- <b>onboard_led: </b>  Onboard-LED-Pin (default=21)
+- <b>led_inverted: </b> True, if you use a ESP-32-S3
+- <b>led_active:  </b>  Can be false if you don't want to use the status-LED
 
 ## MQTT-config:
-Broker:            The Broker's IP-Adress
-Client:            Set a unique client name for each device -> Topics are created from that name
-md_pin:            Pin for sensor (currently not used)
-Port:              The MQTT Network-Port (1883 by default)
-PW:                MQTT Password, if needed
-User:              MQTT User, if needed
-publish_in_json:   Publish Messages in json-format? (true by default)
+- <b>Broker:   </b>         The Broker's IP-Adress
+- <b>Client:   </b>         Set a unique client name for each device -> Topics are created from that name
+- <b>md_pin:   </b>         Pin for sensor (currently not used)
+- <b>Port: </b>             The MQTT Network-Port (1883 by default)
+- <b>PW: </b>               MQTT Password, if needed
+- <b>User:</b>              MQTT User, if needed
+- <b>publish_in_json:</b>   Publish Messages in json-format? (true by default)
 
 ## LightControl_settings
-autostart:        Set the LEDs to the last saved state when power on (true by default)
-bytes_per_pixel:  Set Bytes per pixel (i.e. 3 for RGB, 4 for RGBW, ...)
-led_pin:          LEDs Data-Pin
-led_qty:          Quantity of the used LEDs
+- <b> autostart: </b>        Set the LEDs to the last saved state when power on (true by default)
+- <b> bytes_per_pixel:</b>  Set Bytes per pixel (i.e. 3 for RGB, 4 for RGBW, ...)
+- <b>led_pin:</b>          LEDs Data-Pin
+- <b>led_qty: </b>         Quantity of the used LEDs
 
 ## Options
 This section is currently not used
