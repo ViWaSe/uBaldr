@@ -176,7 +176,7 @@ class MQTTHandler:
     def set_publish_in_json(self, state):
         self.injson = state
         
-    def mqtt_ping():
+    def mqtt_ping(self):
         current_time = time.time()
         if current_time - self.last_ping > self.ping_interval:
             try:
