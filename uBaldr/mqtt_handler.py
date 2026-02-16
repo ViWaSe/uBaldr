@@ -1,6 +1,6 @@
 # New MQTT-Handler Module for Baldr V6.x
 
-version = [2,2,3, 'a']
+version = [2,2,4]
 
 from umqtt_simple import MQTTClient
 import utime as time
@@ -45,6 +45,9 @@ class MQTTHandler:
 
         self.event = logger.Create('MQTT_Handler', '/log/')
         self.ota_event = logger.Create('OTA', '/log/')
+        
+        self.last_ping = time.time()
+        self.ping_interval = 15
 
     def connect(self):
         """
@@ -136,9 +139,10 @@ class MQTTHandler:
     def check_msg(self):
         try:
             if self.client:
+                self.mqtt_ping()
                 self.client.check_msg()
         except Exception as e:
-            self.event.log('E', f'MQTT error - {e}')
+            self.event.log('E', f'MQTT error during check_msg() - {e}')
             self.reconnect()
     def wait_msg(self):
         if self.client is not None:
@@ -171,6 +175,17 @@ class MQTTHandler:
         return self.received
     def set_publish_in_json(self, state):
         self.injson = state
+        
+    def mqtt_ping():
+        current_time = time.time()
+        if current_time - self.last_ping > self.ping_interval:
+            try:
+                self.client.ping()
+                self.last_ping = current_time
+            except Exception as e:
+                self.event.log('E', f'Ping failed - {e}')
+                self.reconnect()
+        
     
     # Update-function
     def perform_ota_update(
