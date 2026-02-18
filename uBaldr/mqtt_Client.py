@@ -138,7 +138,7 @@ def go():
             time.sleep(5)
             continue
         try:
-            mqtt.subscribe(f'uBaldr/{mqttClient}/order')
+            mqtt.subscribe(f'uBaldr/{mqttClient}/main')
             mqtt.subscribe(f'uBaldr/{mqttClient}/echo')
             mqtt.subscribe(f'uBaldr/all')
             
