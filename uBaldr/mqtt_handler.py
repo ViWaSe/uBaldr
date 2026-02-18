@@ -1,6 +1,6 @@
 # New MQTT-Handler Module for Baldr V6.x
 
-version = [2,2,4]
+version = [2,3,0, 'alfa-1']
 
 from umqtt_simple import MQTTClient
 import utime as time
@@ -56,7 +56,7 @@ class MQTTHandler:
         try:
             self.client = MQTTClient(self.client_id, self.broker, user=self.user, password=self.password, keepalive=20)
             self.client.set_callback(self.on_message)
-            self.client.set_last_will(topic=f"{self.client_id}/status", msg='offline', retain=True)
+            self.client.set_last_will(topic=f"{self.client_id}/status", msg="offline", retain=False)
             self.client.connect()
             self.event.log('I', 'MQTT connection established!')
             return True
@@ -74,8 +74,13 @@ class MQTTHandler:
             pass
         try:
             in_message = msg.decode('utf-8')
+            topic_sting = topic.decode('utf-8')
             self.set_rec(True)
             payload = ujson.loads(in_message)
+            
+            if topic_string == 'uBaldr/echo':
+                self.send_alive()
+                return
 
             if payload.get('sub_type') == 'admin' and payload.get('command') == 'get_update':
                 modules = payload.get('module') 
@@ -101,6 +106,11 @@ class MQTTHandler:
         except Exception as e:
             self.event.log('E', f'Message processing failed - {e}')
             self.event.log('I', f'Message: {msg} | Order result: {ans}')
+            
+    # TODO: Add uptime, ip afress and more to the alive JSON
+    def send_alive(self):
+        payload = json.dumps({"online": true, "uptime": "", "ip": ""})
+        self.publish(f'{self.client_id}/status', payload)
 
     # Subscribe to the topic
     def subscribe(self, topic):
