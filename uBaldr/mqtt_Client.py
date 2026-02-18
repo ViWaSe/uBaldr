@@ -4,7 +4,7 @@
 # The incoming orders are processed and executed by order.py and the answer is published to the status-topic
 # Settings stored in config.json
 
-version = [7,2,0, 'alfa-1']
+version = [7,2,0, 'alfa-2']
 
 import utime as time
 from mqtt_handler import MQTTHandler
@@ -94,7 +94,7 @@ def watchdog(
             wd_event.log('I', f'Very quiet here. Checking connection...')
             
             # Publish the echo-message to the /status-topic and set received to false
-            mqtt.publish(f'{mqttClient}/status', {"msg": "echo", "is_err_msg": False, "origin": "watchdog"})
+            mqtt.publish(f'uBaldr/{mqttClient}/status', {"msg": "echo", "is_err_msg": False, "origin": "watchdog"})
             mqtt.set_rec(False)
 
             # check for answer, break if received
@@ -145,7 +145,7 @@ def go():
             for topic in topics:
                 if topic:
                     mqtt.subscribe(f'uBaldr/{topic}')
-                    event.log('I', f'Subscriped to {topic}')
+                    event.log('I', f'Subscribed to {topic}')
     
         except Exception as e:
             event.log ('E', f'Failed to subscribe after successfull connect: {e}')
