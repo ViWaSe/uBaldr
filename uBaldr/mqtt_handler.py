@@ -92,9 +92,9 @@ class MQTTHandler:
             
             if ans:
                 if ans.get('origin') == 'logger':
-                    topic = f'{self.client_id}/status/log'
+                    topic = f'uBaldr/{self.client_id}/status/log'
                 else:
-                    topic = f'{self.client_id}/status'
+                    topic = f'uBaldr/{self.client_id}/answer'
                 if ans == 'conn_lost':
                     self.event.log('I', 'Broker is offline under normal conditions. Trying to reconnect...')
                     self.reconnect()
@@ -110,7 +110,7 @@ class MQTTHandler:
     # TODO: Add uptime, ip afress and more to the alive JSON
     def send_alive(self):
         payload = json.dumps({"online": true, "uptime": "", "ip": ""})
-        self.publish(f'{self.client_id}/status', payload)
+        self.publish(f'uBaldr/{self.client_id}/status', payload)
 
     # Subscribe to the topic
     def subscribe(self, topic):
@@ -118,7 +118,7 @@ class MQTTHandler:
         if self.client:
             self.client.subscribe(topic)
             self.event.log('I', f'Subscribed to {topic}')
-            self.publish(f'{self.client_id}/status', {"msg": "online", "is_err_msg": False, "origin": "mqtt_handler"})
+            self.send_alive()
 
     # Publish-function
     def publish(
@@ -238,13 +238,13 @@ class MQTTHandler:
                     with open(name, "w") as f:
                         f.write(response.text)
                     self.ota_event.log('I', f'{name} updated successfully')
-                    self.publish(f"{self.client_id}/status/update", {"msg": f'{name} update was successful!', "is_err_msg": False, "origin": "OTA_Update"})
+                    self.publish(f"uBaldr/{self.client_id}/status/update", {"msg": f'{name} update was successful!', "is_err_msg": False, "origin": "OTA_Update"})
                 else:
                     self.ota_event.log('E', f'Could not download {name}')
-                    self.publish(f"{self.client_id}/status/update", {"msg": f'update failed for {name}', "is_err_msg": True, "origin": "OTA_Update"})
+                    self.publish(f"uBaldr/{self.client_id}/status/update", {"msg": f'update failed for {name}', "is_err_msg": True, "origin": "OTA_Update"})
             except Exception as e:
                 self.ota_event.log('F', f'Update failed for {name} - {e}')
-                self.publish(f"{self.client_id}/status/update", {"msg": f'update error for {name}: {e}', "is_err_msg": True, "origin": "OTA_Update"})
+                self.publish(f"uBaldr/{self.client_id}/status/update", {"msg": f'update error for {name}: {e}', "is_err_msg": True, "origin": "OTA_Update"})
 
         if isinstance(module_name, list):
             anz = len(module_name)
@@ -256,12 +256,12 @@ class MQTTHandler:
                 # send update progress to the broker
                 act += 1
                 perc = round((act/anz*100),0)
-                self.publish(f"{self.client_id}/status/update", {"msg": f"update", "progress": perc, "is_err_msg": False, "origin": "OTA_Update"}, use_raw_string=True)
+                self.publish(f"uBaldr/{self.client_id}/status/update", {"msg": f"update", "progress": perc, "is_err_msg": False, "origin": "OTA_Update"}, use_raw_string=True)
             
-            self.publish(f"{self.client_id}/status/update", {"msg": "OTA-Update done! Will now reboot...", "is_err_msg": False, "origin": "OTA_Update"})       
+            self.publish(f"uBaldr/{self.client_id}/status/update", {"msg": "OTA-Update done! Will now reboot...", "is_err_msg": False, "origin": "OTA_Update"})       
             self.ota_event.log('I', 'Update done. Will now reboot ...')
             import machine
             machine.reset()
         
         else:
-            self.publish(f"{self.client_id}/status/update", {"msg": "No module updated. Please send the modules in list-format! Try the provided string from github.", "is_err_msg": True, "origin": "OTA_Update"})
+            self.publish(f"uBaldr/{self.client_id}/status/update", {"msg": "No module updated. Please send the modules in list-format! Try the provided string from github.", "is_err_msg": True, "origin": "OTA_Update"})
