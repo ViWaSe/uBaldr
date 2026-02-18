@@ -4,7 +4,7 @@
 # The incoming orders are processed and executed by order.py and the answer is published to the status-topic
 # Settings stored in config.json
 
-version = [7,1,6]
+version = [7,2,0, 'alfa-1']
 
 import utime as time
 from mqtt_handler import MQTTHandler
@@ -37,6 +37,8 @@ mqttPort        = settings.get('MQTT-config', 'Port')
 mqttUser        = settings.get('MQTT-config', 'User')
 mqttPW          = settings.get('MQTT-config', 'PW')
 publish_in_Json = settings.get('MQTT-config', 'publish_in_json')
+
+topics = settings.get('MQTT-config', 'topics')
 
 # Set the LED-Timer depending on the platform (pico or not)
 is_pico = sys.platform == 'rp2'
@@ -136,7 +138,15 @@ def go():
             time.sleep(5)
             continue
         try:
-            mqtt.subscribe(f'{mqttClient}/order')
+            mqtt.subscribe(f'uBaldr/{mqttClient}/order')
+            mqtt.subscribe(f'uBaldr/{mqttClient}/echo')
+            mqtt.subscribe(f'uBaldr/all')
+            
+            for topic in topics:
+                if topic:
+                    mqtt.subscribe(f'uBaldr/{topic}')
+                    event.log('I', f'Subscriped to {topic}')
+    
         except Exception as e:
             event.log ('E', f'Failed to subscribe after successfull connect: {e}')
         
