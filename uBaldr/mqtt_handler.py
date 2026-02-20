@@ -1,6 +1,6 @@
 # New MQTT-Handler Module for Baldr V6.x
 
-version = [2,3,0, 'alfa-1']
+version = [2,3,0, 'alfa-2']
 
 from umqtt_simple import MQTTClient
 import utime as time
@@ -49,6 +49,9 @@ class MQTTHandler:
         self.last_ping = time.time()
         self.ping_interval = 15
 
+    
+
+    # Connection ---------------------------------------------------------------------------------------------------------------
     def connect(self):
         """
         Establish the MQTT-Connection
@@ -63,6 +66,67 @@ class MQTTHandler:
         except Exception as e:
             self.event.log('E', f'Connection failed - {e}')
             return False
+    
+    def disconnect(self):
+        if self.client:
+            self.client.disconnect()
+            self.event.log('I', 'MQTT connection closed')
+    
+    def reconnect(self):
+        self.event.log('I', 'Attempting to reconnect...')
+        try:
+            self.disconnect()
+        except:
+            pass
+        while True: 
+            try: 
+                self.connect()
+                break
+            except Exception as e:
+                self.event.log('E', 'Reconnect failed, retrying in 5 seconds...')
+                time.sleep(5) 
+        self.event.log('I', 'Reconnected successfully!')
+        self.subscribe(self.subscribed_topic)
+    
+    def subscribe(self, topic):
+        self.subscribed_topic = topic
+        if self.client:
+            self.client.subscribe(topic)
+            self.event.log('I', f'Subscribed to {topic}')
+            self.send_alive()
+
+    # TODO: Remove the topic from the topics-list and save it to the JSON
+    def unsubscribe(self, topic, remove=False):
+        self.client.unsubscribe(topic)
+        if remove:
+            pass
+    
+    # Message functions---------------------------------------------------------------------------------------------------------
+
+    # Publish to a topic
+    def publish(
+            self, 
+            topic, 
+            message, 
+            retain=False,
+            use_raw_string=False
+            ):
+        if not self.client:
+            return
+        if not use_raw_string:
+            injson = self.injson
+            if injson:
+                payload = {
+                    "msg": message.get("msg"),
+                    "is_err_msg": message.get("is_err_msg"),
+                    "origin": message.get("origin")
+                }
+                self.client.publish(topic, json.dumps(payload), retain=retain)
+            else:
+                self.client.publish(topic, str(message.get("msg")), retain=retain)
+        else:
+                self.client.publish(topic, json.dumps(message), retain=retain)
+            # Log('MQTT', f'[ INFO  ]: Published message to {topic}: {message}')
 
     # process incomming messages
     def on_message(
@@ -74,7 +138,7 @@ class MQTTHandler:
             pass
         try:
             in_message = msg.decode('utf-8')
-            topic_sting = topic.decode('utf-8')
+            topic_string = topic.decode('utf-8')
             self.set_rec(True)
             payload = ujson.loads(in_message)
             
@@ -106,44 +170,6 @@ class MQTTHandler:
         except Exception as e:
             self.event.log('E', f'Message processing failed - {e}')
             self.event.log('I', f'Message: {msg} | Order result: {ans}')
-            
-    # TODO: Add uptime, ip afress and more to the alive JSON
-    def send_alive(self):
-        payload = json.dumps({"online": true, "uptime": "", "ip": ""})
-        self.publish(f'uBaldr/{self.client_id}/status', payload)
-
-    # Subscribe to the topic
-    def subscribe(self, topic):
-        self.subscribed_topic = topic
-        if self.client:
-            self.client.subscribe(topic)
-            self.event.log('I', f'Subscribed to {topic}')
-            self.send_alive()
-
-    # Publish-function
-    def publish(
-            self, 
-            topic, 
-            message, 
-            retain=False,
-            use_raw_string=False
-            ):
-        if not self.client:
-            return
-        if not use_raw_string:
-            injson = self.injson
-            if injson:
-                payload = {
-                    "msg": message.get("msg"),
-                    "is_err_msg": message.get("is_err_msg"),
-                    "origin": message.get("origin")
-                }
-                self.client.publish(topic, json.dumps(payload), retain=retain)
-            else:
-                self.client.publish(topic, str(message.get("msg")), retain=retain)
-        else:
-                self.client.publish(topic, json.dumps(message), retain=retain)
-            # Log('MQTT', f'[ INFO  ]: Published message to {topic}: {message}')
 
     # Check for incoming messages, reconnect if needed
     def check_msg(self):
@@ -156,36 +182,31 @@ class MQTTHandler:
             self.reconnect()
     def wait_msg(self):
         if self.client is not None:
-            self.client.wait_msg() 
+            self.client.wait_msg()
 
-    def disconnect(self):
-        if self.client:
-            self.client.disconnect()
-            self.event.log('I', 'MQTT connection closed')
-    
-    def reconnect(self):
-        self.event.log('I', 'Attempting to reconnect...')
-        try:
-            self.disconnect()
-        except:
-            pass
-        while True: 
-            try: 
-                self.connect()
-                break
-            except Exception as e:
-                self.event.log('E', 'Reconnect failed, retrying in 5 seconds...')
-                time.sleep(5) 
-        self.event.log('I', 'Reconnected successfully!')
-        self.subscribe(self.subscribed_topic)
-    
-    def set_rec(self, state):
-        self.received=state
-    def get_rec(self):
-        return self.received
-    def set_publish_in_json(self, state):
-        self.injson = state
-        
+    # Utils --------------------------------------------------------------------------------------------------------------------
+    # TODO: Add ip adress and more to the alive JSON
+    def send_alive(self):
+        data = {
+            "status": "online",
+            "uptime": self.get_uptime(),
+            "ip": "",
+            "main_version": ""
+        }
+        payload = json.dumps({"online": True, "uptime": "", "ip": ""})
+        self.publish(f'uBaldr/{self.client_id}/status', payload)
+
+    def get_uptime(self):
+        millis = time.ticks_ms()
+
+        secs = millis // 1000
+        mins = secs // 60
+        hrs = mins // 60
+        days = hrs // 24
+
+        # return string in format 1d 04h 20m
+        return f'{days}d {hrs % 24:02d}h {mins & 60:02d}m'
+
     def mqtt_ping(self):
         current_time = time.time()
         if current_time - self.last_ping > self.ping_interval:
@@ -195,7 +216,15 @@ class MQTTHandler:
             except Exception as e:
                 self.event.log('E', f'Ping failed - {e}')
                 self.reconnect()
-        
+
+    def set_rec(self, state):
+        self.received=state
+
+    def get_rec(self):
+        return self.received
+    
+    def set_publish_in_json(self, state):
+        self.injson = state  
     
     # Update-function
     def perform_ota_update(

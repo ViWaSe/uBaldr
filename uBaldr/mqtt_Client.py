@@ -4,7 +4,7 @@
 # The incoming orders are processed and executed by order.py and the answer is published to the status-topic
 # Settings stored in config.json
 
-version = [7,2,0, 'alfa-2']
+version = [7,2,0, 'alfa-3']
 
 import utime as time
 from mqtt_handler import MQTTHandler
@@ -15,6 +15,11 @@ import logger
 import sys
 import gc
 from LightControl import LC
+
+try:
+    from typing import Any
+except ImportError:
+    Any = object
 
 # Connect to WLAN using PicoWifi-Module
 wlan = Client()
@@ -38,7 +43,7 @@ mqttUser        = settings.get('MQTT-config', 'User')
 mqttPW          = settings.get('MQTT-config', 'PW')
 publish_in_Json = settings.get('MQTT-config', 'publish_in_json')
 
-topics = settings.get('MQTT-config', 'topics')
+topics = settings.get('MQTT-config', 'topics') or []
 
 # Set the LED-Timer depending on the platform (pico or not)
 is_pico = sys.platform == 'rp2'
@@ -166,5 +171,4 @@ def go():
                 event.log('W', f'MQTT-reconnect failed - Error: {e} Resetting network connection...')
                 wlan.disconnect()
                 wlan.connect()   
-
 
