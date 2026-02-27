@@ -4,7 +4,7 @@
 # The incoming orders are processed and executed by order.py and the answer is published to the status-topic
 # Settings stored in config.json
 
-version = [7,2,0, 'alfa-3']
+version = [7,2,0, 'alfa-5']
 
 import utime as time
 from mqtt_handler import MQTTHandler
@@ -42,6 +42,7 @@ mqttPort        = settings.get('MQTT-config', 'Port')
 mqttUser        = settings.get('MQTT-config', 'User')
 mqttPW          = settings.get('MQTT-config', 'PW')
 publish_in_Json = settings.get('MQTT-config', 'publish_in_json')
+ip_adress       = settings.get('Wifi-config', 'IP')
 
 topics = settings.get('MQTT-config', 'topics') or []
 
@@ -71,6 +72,8 @@ mqtt = MQTTHandler(
     password=mqttPW,
     pinjson=publish_in_Json # type: ignore
 )
+
+mqtt.set_ip(ip_adress)
 
 event = logger.Create('Client', '/log')
 wd_event = logger.Create('Watchdog', '/log', 1024)

@@ -1,6 +1,6 @@
 # New MQTT-Handler Module for Baldr V6.x
 
-version = [2,3,0, 'alfa-4']
+version = [2,3,0, 'alfa-5']
 
 from umqtt_simple import MQTTClient
 import utime as time
@@ -48,6 +48,8 @@ class MQTTHandler:
         
         self.last_ping = time.time()
         self.ping_interval = 15
+
+        self.ip_adress = ''
 
     
 
@@ -186,12 +188,11 @@ class MQTTHandler:
             self.client.wait_msg()
 
     # Utils --------------------------------------------------------------------------------------------------------------------
-    # TODO: Add ip adress and more to the alive JSON
     def send_alive(self):
         data = {
             "status": "online",
             "uptime": self.get_uptime(),
-            "ip": "",
+            "ip": self.ip_adress,
             "mqtt_handler_version": version,
             "client_id": self.client_id
         }
@@ -226,8 +227,11 @@ class MQTTHandler:
     
     def set_publish_in_json(self, state):
         self.injson = state  
-    
-    # Update-function
+
+    def set_ip(self, ip):
+        self.ip_adress = ip
+
+    # Update-function ----------------------------------------------------------------------------------------------------------
     def perform_ota_update(
             self, 
             module_name='all', 
