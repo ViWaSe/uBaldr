@@ -42,13 +42,5 @@ def by_module(module):
 def all():
     return versions
 
-# Under construction:
-def version_check(module, requested, level):
-    module_version = module
-    if module_version[level] == requested[level]:
-        return True
-    else:
-        return False
-
 def version_string(sub):
     return str(f'{sub[0]}.{sub[1]}.{sub[2]}')

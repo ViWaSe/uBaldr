@@ -1,6 +1,6 @@
 # New MQTT-Handler Module for Baldr V6.x
 
-version = [2,3,0, 'alfa-2']
+version = [2,3,0, 'alfa-4']
 
 from umqtt_simple import MQTTClient
 import utime as time
@@ -62,6 +62,7 @@ class MQTTHandler:
             self.client.set_last_will(topic=f"{self.client_id}/status", msg="offline", retain=False)
             self.client.connect()
             self.event.log('I', 'MQTT connection established!')
+            self.send_alive()
             return True
         except Exception as e:
             self.event.log('E', f'Connection failed - {e}')
@@ -109,7 +110,7 @@ class MQTTHandler:
             topic, 
             message, 
             retain=False,
-            use_raw_string=False
+            use_raw_string=False,
             ):
         if not self.client:
             return
@@ -140,12 +141,12 @@ class MQTTHandler:
             in_message = msg.decode('utf-8')
             topic_string = topic.decode('utf-8')
             self.set_rec(True)
-            payload = ujson.loads(in_message)
             
-            if topic_string == 'uBaldr/echo':
+            if topic_string == f'uBaldr/{self.client_id}/echo':
                 self.send_alive()
                 return
-
+            
+            payload = ujson.loads(in_message)
             if payload.get('sub_type') == 'admin' and payload.get('command') == 'get_update':
                 modules = payload.get('module') 
                 base_url = payload.get('base_url')
@@ -191,10 +192,10 @@ class MQTTHandler:
             "status": "online",
             "uptime": self.get_uptime(),
             "ip": "",
-            "main_version": ""
+            "mqtt_handler_version": version,
+            "client_id": self.client_id
         }
-        payload = json.dumps({"online": True, "uptime": "", "ip": ""})
-        self.publish(f'uBaldr/{self.client_id}/status', payload)
+        self.publish(f'uBaldr/{self.client_id}/status', data, use_raw_string=True)
 
     def get_uptime(self):
         millis = time.ticks_ms()
