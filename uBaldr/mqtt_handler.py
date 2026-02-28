@@ -1,6 +1,6 @@
 # New MQTT-Handler Module for Baldr V6.x
 
-version = [2,3,0, 'alfa-5']
+version = [2,3,1, 'alfa']
 
 from umqtt_simple import MQTTClient
 import utime as time
@@ -39,7 +39,8 @@ class MQTTHandler:
         self.user = user
         self.password = password
         self.client: Optional[MQTTClient] = None # type: ignore
-        self.subscribed_topic = None
+        self.subscribed_topics = list()
+        self.topics = list()
         self.injson = pinjson
         self.received = False
 
@@ -72,6 +73,8 @@ class MQTTHandler:
     
     def disconnect(self):
         if self.client:
+            while self.subscribed_topics:
+                self.unsubscribe(self.subscribed_topics[0])
             self.client.disconnect()
             self.event.log('I', 'MQTT connection closed')
     
@@ -89,20 +92,28 @@ class MQTTHandler:
                 self.event.log('E', 'Reconnect failed, retrying in 5 seconds...')
                 time.sleep(5) 
         self.event.log('I', 'Reconnected successfully!')
-        self.subscribe(self.subscribed_topic)
+        for topic in self.topics:
+            if topic:
+                self.subscribe(topic)
+        self.event.log('I', 'Re-subscribed to all topics after reconnect')
     
     def subscribe(self, topic):
-        self.subscribed_topic = topic
-        if self.client:
-            self.client.subscribe(topic)
-            self.event.log('I', f'Subscribed to {topic}')
+        if topic not in self.topics:
+            self.topics.append(topic)
+        
+        if topic not in self.subscribed_topics:
+            self.subscribed_topics.append(topic)
+            if self.client and topic:
+                self.client.subscribe(topic)
+                self.event.log('I', f'Subscribed to {topic}')
             self.send_alive()
 
     # TODO: Remove the topic from the topics-list and save it to the JSON
     def unsubscribe(self, topic, remove=False):
         self.client.unsubscribe(topic)
+        self.subscribed_topics.remove(topic)
         if remove:
-            pass
+            self.topics.remove(topic)
     
     # Message functions---------------------------------------------------------------------------------------------------------
 

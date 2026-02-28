@@ -4,7 +4,7 @@
 # The incoming orders are processed and executed by order.py and the answer is published to the status-topic
 # Settings stored in config.json
 
-version = [7,2,0, 'alfa-5']
+version = [7,2,1, 'alpha']
 
 import utime as time
 from mqtt_handler import MQTTHandler
@@ -76,7 +76,7 @@ mqtt = MQTTHandler(
 mqtt.set_ip(ip_adress)
 
 event = logger.Create('Client', '/log')
-wd_event = logger.Create('Watchdog', '/log', 1024)
+wd_event = logger.Create(file_name='Watchdog', dir='/log', max_size=1024, loglevel=0)
 
 # Watchdog-function to check the connection to the broker
 def watchdog(
@@ -102,8 +102,11 @@ def watchdog(
             wd_event.log('I', f'Very quiet here. Checking connection...')
             
             # Publish the echo-message to the /status-topic and set received to false
-            mqtt.publish(f'uBaldr/{mqttClient}/status', {"msg": "echo", "is_err_msg": False, "origin": "watchdog"})
             mqtt.set_rec(False)
+            wd_event.log('I', f'Recieved message: {mqtt.get_rec()}')
+            mqtt.publish(f'uBaldr/{mqttClient}/status', {"msg": "echo", "is_err_msg": False, "origin": "watchdog"})
+            wd_event.log('I', f'Topic: uBaldr/{mqttClient}/status | Message: >>"msg": "echo", "is_err_msg": False, "origin": "watchdog"<<')
+            wd_event.log('I', f'Recieved message: {mqtt.get_rec()}')
 
             # check for answer, break if received
             for i in range (timeout_loops):
