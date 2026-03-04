@@ -4,7 +4,7 @@
 # The incoming orders are processed and executed by order.py and the answer is published to the status-topic
 # Settings stored in config.json
 
-version = [7,2,1, 'alpha']
+version = [7,2,1]
 
 import utime as time
 from mqtt_handler import MQTTHandler

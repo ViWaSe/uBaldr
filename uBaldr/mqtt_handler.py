@@ -1,6 +1,6 @@
 # New MQTT-Handler Module for Baldr V6.x
 
-version = [2,3,1, 'alfa']
+version = [2,3,2]
 
 from umqtt_simple import MQTTClient
 import utime as time
@@ -108,7 +108,7 @@ class MQTTHandler:
                 self.event.log('I', f'Subscribed to {topic}')
             self.send_alive()
 
-    # TODO: Remove the topic from the topics-list and save it to the JSON
+    # TODO: Remove the topic from the JSON-config
     def unsubscribe(self, topic, remove=False):
         self.client.unsubscribe(topic)
         self.subscribed_topics.remove(topic)
@@ -186,13 +186,14 @@ class MQTTHandler:
             self.event.log('I', f'Message: {msg} | Order result: {ans}')
 
     # Check for incoming messages, reconnect if needed
-    def check_msg(self):
+    def check_msg(self, cooldown=20):
         try:
             if self.client:
                 self.mqtt_ping()
                 self.client.check_msg()
         except Exception as e:
-            self.event.log('E', f'MQTT error during check_msg() - {e}')
+            self.event.log('E', f'MQTT error during check_msg() - {e}. Waiting for {cooldown}s to reconnect')
+            time.sleep(cooldown)
             self.reconnect()
     def wait_msg(self):
         if self.client is not None:
@@ -205,7 +206,8 @@ class MQTTHandler:
             "uptime": self.get_uptime(),
             "ip": self.ip_adress,
             "mqtt_handler_version": version,
-            "client_id": self.client_id
+            "client_id": self.client_id,
+            "subscribed_to": self.subscribed_topics
         }
         self.publish(f'uBaldr/{self.client_id}/status', data, use_raw_string=True)
 
@@ -220,14 +222,15 @@ class MQTTHandler:
         # return string in format 1d 04h 20m
         return f'{days}d {hrs % 24:02d}h {mins & 60:02d}m'
 
-    def mqtt_ping(self):
+    def mqtt_ping(self, cooldown=10):
         current_time = time.time()
         if current_time - self.last_ping > self.ping_interval:
             try:
                 self.client.ping()
                 self.last_ping = current_time
             except Exception as e:
-                self.event.log('E', f'Ping failed - {e}')
+                self.event.log('E', f'Ping failed - {e} | Waiting {cooldown}s to reconnect')
+                time.sleep(10)
                 self.reconnect()
 
     def set_rec(self, state):

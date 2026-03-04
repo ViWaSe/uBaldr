@@ -24,7 +24,7 @@ versions = {
     'mqtt_handler': mqtt_handler,
     'Led_controller': led_controller,
     'logger': logger,
-    'main': [7,2,1],
+    'main': [7,3,1],
     'last umqtt_simple': [f'{umqtt[0]}/{umqtt[1]}/{umqtt[2]}'],
     'Platform': [str(platform)]
     }
