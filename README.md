@@ -36,11 +36,33 @@ The Project works with MQTT-Topics. <client>/order ist the order you send to the
   - There is also an /log-topic to get logfiles (device/status/log)
 
 # MQTT topics
-The Topics are created from the client-name that is set in the config.json (MQTT-Config -> Client).
-  - <client>/order: Used for commands to control thie client
-  - <client>/status: Status messages from the client
-  -   <client>/status/log: Used to return logs
-  -   <client>/status/update: Used for OTA-Update status, like progress
+- Topics can be set in the confic JSON-File in the section "MQTT-config". "topics" should be a list with the topics to subscribe.
+- The client subscribes to 3 topics by default:
+-- <b>uBaldr/all</b>			 Every device subscribes to this topic
+-- <b>uBaldr/<Client-id>/main:</b> The main topic for the client
+-- <b>uBaldr/<Client-id>/echo:</b> Used only for echo-messages
+- There are 3 topics, the client publishes:
+-- <b>uBaldr/<Client-id>/status:</b> Status-topic, used for alive-messages
+-- <b>uBaldr/<Client-id>/status/log:</b> For sending logfile-content
+-- <b>uBaldr/<Client-id>/answer:</b> Used for any answer-message
+
+# Alive-JSON
+- From Version 7.3, the clients sends a Alive-JSON on first connect or a message is received on uBaldr/<client-id>/echo.
+- The JSON contains informations, like uptime, IP-Adress, Client-id and subscribed topics.
+- Example JSON:
+>{
+>"status": "online",
+>"uptime": "01d 04h 25m",
+>"ip": "92.168.178.44",
+>"mqtt_handler_version": [2,3,1],
+>"client_id": "bookworm",
+>"subscribed_to": [
+>"uBaldr/all", 
+>"uBaldr/bookworm/main",
+>"uBaldr/home"
+>]
+>}
+
 
 # Micropython-Files
 You find everything you need to copy to your µPython-device in the uBaldr-Folder.
@@ -66,6 +88,7 @@ Configuration is stored in a JSON file, named config.json that is explained in t
 - <b>PW: </b>               MQTT Password, if needed
 - <b>User:</b>              MQTT User, if needed
 - <b>publish_in_json:</b>   Publish Messages in json-format? (true by default)
+- <b>topics:</b>            A list of topics to subscribe
 
 ## LightControl_settings
 - <b> autostart: </b>        Set the LEDs to the last saved state when power on (true by default)
