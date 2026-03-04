@@ -1,10 +1,11 @@
 # Smarthome Order-Modul by vwall
 
-version = [7,2,1]
+version = [7,3,0]
 
 import json
 from LightControl import LC as LightControl
 import logger
+from mqtt_Client import settings as mqtt_settings
 
 event = logger.Create('order', '/log')
 
@@ -18,7 +19,9 @@ class Proc:
         self.speed = data.get('speed', 5)
         self.steps = data.get('steps', 50)
         self.new_value = data.get('new_value', '')
-        self.settings = settings_obj
+        self.value = data.get('value', '')
+
+        self.mqtt_settings = mqtt_settings
     
     # Make result / answer message ------------------------------------------------------------------------------------
     
@@ -70,14 +73,12 @@ class Proc:
     # Admin functions ------------------------------------------------------------------------------------------------
     
     def admin(self):
-        from mqtt_Client import settings as mqtt_settings
-        self.mqtt_settings = mqtt_settings
 
         command = self.command
         new_value = self.new_value
+        value = self.value
 
         command_map = {
-            'echo': lambda: self.echo(),
             'offline': lambda: self.handle_offline(),
             'alive': lambda: self.ok(),
             'get_version': lambda: self.get_version(),
@@ -88,23 +89,35 @@ class Proc:
             'set_GMT_wintertime': lambda: self.change_GMT_time(new_value),
             'set_GMT_offset': lambda: self.change_GMT_time(new_value),
             'reboot': lambda: self.reboot(),
-            'get_sysinfo': lambda: self.get_sysinfo(),
             'onboard_led_active': lambda: self.onboard_led_active(new_value),
             'publish_in_json': lambda: self.pinjson(new_value),
             'change_client': lambda: self.change_client(new_value),
-            'get_config': lambda: self.return_conf()
+            'get_config': lambda: self.return_conf(),
+            'add_topic': lambda: self.add_topic(value),
+            'remove_topic': lambda: self.remove_topic(value)
         }
         
         return command_map.get(command, lambda: self.make_result(msg=f'Command not found: {command}', is_error=True, origin="command_handler"))()
     
     def return_conf(self):
-        pass
-    def change_client(self, new_name):
-        self.mqtt_settings.save_param(group='MQTT-config', param='Client', new_value=new_name)
+        # Not implemented yet
         pass
 
-    def echo(self):
-        return self.make_result(msg='alive', origin='admin')
+    def change_client(self, new_name):
+        self.mqtt_settings.save_param(group='MQTT-config', param='Client', new_value=new_name)
+        return 'New Client-id is set. Will use it after next reboot'
+
+    def add_topic(self, topic):
+        topics = self.mqtt_settings.get('MQTT-config', 'topics') or []
+        topics.append(topic)
+        self.mqtt_settings.save_param('MQTT-config', 'topics')
+        return f'Added {topic} to topics-list. Perform a reboot to use it.'
+    
+    def remove_topic(self, topic):
+        topics = self.mqtt_settings.get('MQTT-config', 'topics') or []
+        topics.remove(topic)
+        self.mqtt_settings.save_param('MQTT-config', 'topics')
+        return f'Removed {topic} from topics-list. Perform a reboot to use it.'
     
     def ok(self):
         return self.make_result(msg='ok', origin='admin')
@@ -118,11 +131,6 @@ class Proc:
     # Log when Broker is offfline
     def handle_offline(self):
         return 'conn_lost'
-
-    def get_sysinfo(self):
-        import sys
-        platform = sys.platform
-        return self.make_result(msg=f'Platform: {platform}', is_error=False, origin='admin')
 
     # Reboot-request
     def reboot(self):
