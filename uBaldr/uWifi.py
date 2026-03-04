@@ -1,7 +1,6 @@
 # Wifi network module for Prapberry pi pico and ESP-32
 # configuration stored in JSON-File
 # works with micropython v1.21.0 and higher
-# TODO: Implement the check_connection-function
 
 version = [7,1,3]
 

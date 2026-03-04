@@ -84,7 +84,7 @@ class LightControl:
 
         self.level = 0
         self.led = Pin(self.led_pin, Pin.OUT, value=0)
-        self.np: Any = NeoPixel(self.led, self.pixel, bpp=self.bpp) # type: ignore # type
+        self.np: Any = NeoPixel(self.led, self.pixel, bpp=self.bpp) # type: ignore
 
         # Set save-timer
         self.last_change = 0
@@ -321,3 +321,22 @@ class LightControl:
 
 # Auto-initialize LEDs
 LC = LightControl()
+
+"""
+def set_smooth(self, target_color, speed=10, steps=50):
+    current = list(self.cache)
+    target = list(target_color)
+    while len(target) < 4: target.append(0)
+    
+    # Vorbereiten der Differenzen spart Rechenzeit in der Schleife
+    diffs = [target[i] - current[i] for i in range(4)]
+    
+    for step in range(1, steps + 1):
+        # Ganzzahl-Arithmetik für Geschwindigkeit
+        intermediate = [
+            int(current[i] + (diffs[i] * step // steps))
+            for i in range(4)
+        ]
+        self.static(intermediate, self.level)
+        time.sleep_ms(speed)
+"""

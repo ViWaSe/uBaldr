@@ -24,7 +24,7 @@ versions = {
     'mqtt_handler': mqtt_handler,
     'Led_controller': led_controller,
     'logger': logger,
-    'main': [7,2,1],
+    'main': [7,3,1],
     'last umqtt_simple': [f'{umqtt[0]}/{umqtt[1]}/{umqtt[2]}'],
     'Platform': [str(platform)]
     }
@@ -41,14 +41,6 @@ def by_module(module):
 
 def all():
     return versions
-
-# Under construction:
-def version_check(module, requested, level):
-    module_version = module
-    if module_version[level] == requested[level]:
-        return True
-    else:
-        return False
 
 def version_string(sub):
     return str(f'{sub[0]}.{sub[1]}.{sub[2]}')

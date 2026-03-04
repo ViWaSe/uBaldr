@@ -1,6 +1,6 @@
 # New MQTT-Handler Module for Baldr V6.x
 
-version = [2,2,4]
+version = [2,3,2]
 
 from umqtt_simple import MQTTClient
 import utime as time
@@ -39,7 +39,8 @@ class MQTTHandler:
         self.user = user
         self.password = password
         self.client: Optional[MQTTClient] = None # type: ignore
-        self.subscribed_topic = None
+        self.subscribed_topics = list()
+        self.topics = list()
         self.injson = pinjson
         self.received = False
 
@@ -49,6 +50,11 @@ class MQTTHandler:
         self.last_ping = time.time()
         self.ping_interval = 15
 
+        self.ip_adress = ''
+
+    
+
+    # Connection ---------------------------------------------------------------------------------------------------------------
     def connect(self):
         """
         Establish the MQTT-Connection
@@ -56,67 +62,68 @@ class MQTTHandler:
         try:
             self.client = MQTTClient(self.client_id, self.broker, user=self.user, password=self.password, keepalive=20)
             self.client.set_callback(self.on_message)
-            self.client.set_last_will(topic=f"{self.client_id}/status", msg='offline', retain=True)
+            self.client.set_last_will(topic=f"{self.client_id}/status", msg="offline", retain=False)
             self.client.connect()
             self.event.log('I', 'MQTT connection established!')
+            self.send_alive()
             return True
         except Exception as e:
             self.event.log('E', f'Connection failed - {e}')
             return False
-
-    # process incomming messages
-    def on_message(
-            self, 
-            topic, 
-            msg
-            ):
-        if not msg:
-            pass
-        try:
-            in_message = msg.decode('utf-8')
-            self.set_rec(True)
-            payload = ujson.loads(in_message)
-
-            if payload.get('sub_type') == 'admin' and payload.get('command') == 'get_update':
-                modules = payload.get('module') 
-                base_url = payload.get('base_url')
-                self.perform_ota_update(modules, base_url)
-                return
-
-            ans = run(in_message)
-            
-            if ans:
-                if ans.get('origin') == 'logger':
-                    topic = f'{self.client_id}/status/log'
-                else:
-                    topic = f'{self.client_id}/status'
-                if ans == 'conn_lost':
-                    self.event.log('I', 'Broker is offline under normal conditions. Trying to reconnect...')
-                    self.reconnect()
-                else:
-                    self.publish(f'{topic}', ans)
-            if not ans:
-                ans = '>> No order processing <<'
-
-        except Exception as e:
-            self.event.log('E', f'Message processing failed - {e}')
-            self.event.log('I', f'Message: {msg} | Order result: {ans}')
-
-    # Subscribe to the topic
-    def subscribe(self, topic):
-        self.subscribed_topic = topic
+    
+    def disconnect(self):
         if self.client:
-            self.client.subscribe(topic)
-            self.event.log('I', f'Subscribed to {topic}')
-            self.publish(f'{self.client_id}/status', {"msg": "online", "is_err_msg": False, "origin": "mqtt_handler"})
+            while self.subscribed_topics:
+                self.unsubscribe(self.subscribed_topics[0])
+            self.client.disconnect()
+            self.event.log('I', 'MQTT connection closed')
+    
+    def reconnect(self):
+        self.event.log('I', 'Attempting to reconnect...')
+        try:
+            self.disconnect()
+        except:
+            pass
+        while True: 
+            try: 
+                self.connect()
+                break
+            except Exception as e:
+                self.event.log('E', 'Reconnect failed, retrying in 5 seconds...')
+                time.sleep(5) 
+        self.event.log('I', 'Reconnected successfully!')
+        for topic in self.topics:
+            if topic:
+                self.subscribe(topic)
+        self.event.log('I', 'Re-subscribed to all topics after reconnect')
+    
+    def subscribe(self, topic):
+        if topic not in self.topics:
+            self.topics.append(topic)
+        
+        if topic not in self.subscribed_topics:
+            self.subscribed_topics.append(topic)
+            if self.client and topic:
+                self.client.subscribe(topic)
+                self.event.log('I', f'Subscribed to {topic}')
+            self.send_alive()
 
-    # Publish-function
+    # TODO: Remove the topic from the JSON-config
+    def unsubscribe(self, topic, remove=False):
+        self.client.unsubscribe(topic)
+        self.subscribed_topics.remove(topic)
+        if remove:
+            self.topics.remove(topic)
+    
+    # Message functions---------------------------------------------------------------------------------------------------------
+
+    # Publish to a topic
     def publish(
             self, 
             topic, 
             message, 
             retain=False,
-            use_raw_string=False
+            use_raw_string=False,
             ):
         if not self.client:
             return
@@ -135,59 +142,110 @@ class MQTTHandler:
                 self.client.publish(topic, json.dumps(message), retain=retain)
             # Log('MQTT', f'[ INFO  ]: Published message to {topic}: {message}')
 
+    # process incomming messages
+    def on_message(
+            self, 
+            topic, 
+            msg
+            ):
+        if not msg:
+            pass
+        try:
+            in_message = msg.decode('utf-8')
+            topic_string = topic.decode('utf-8')
+            self.set_rec(True)
+            
+            if topic_string == f'uBaldr/{self.client_id}/echo':
+                self.send_alive()
+                return
+            
+            payload = ujson.loads(in_message)
+            if payload.get('sub_type') == 'admin' and payload.get('command') == 'get_update':
+                modules = payload.get('module') 
+                base_url = payload.get('base_url')
+                self.perform_ota_update(modules, base_url)
+                return
+
+            ans = run(in_message)
+            
+            if ans:
+                if ans.get('origin') == 'logger':
+                    topic = f'uBaldr/{self.client_id}/status/log'
+                else:
+                    topic = f'uBaldr/{self.client_id}/answer'
+                if ans == 'conn_lost':
+                    self.event.log('I', 'Broker is offline under normal conditions. Trying to reconnect...')
+                    self.reconnect()
+                else:
+                    self.publish(f'{topic}', ans)
+            if not ans:
+                ans = '>> No order processing <<'
+
+        except Exception as e:
+            self.event.log('E', f'Message processing failed - {e}')
+            self.event.log('I', f'Message: {msg} | Order result: {ans}')
+
     # Check for incoming messages, reconnect if needed
-    def check_msg(self):
+    def check_msg(self, cooldown=20):
         try:
             if self.client:
                 self.mqtt_ping()
                 self.client.check_msg()
         except Exception as e:
-            self.event.log('E', f'MQTT error during check_msg() - {e}')
+            self.event.log('E', f'MQTT error during check_msg() - {e}. Waiting for {cooldown}s to reconnect')
+            time.sleep(cooldown)
             self.reconnect()
     def wait_msg(self):
         if self.client is not None:
-            self.client.wait_msg() 
+            self.client.wait_msg()
 
-    def disconnect(self):
-        if self.client:
-            self.client.disconnect()
-            self.event.log('I', 'MQTT connection closed')
-    
-    def reconnect(self):
-        self.event.log('I', 'Attempting to reconnect...')
-        try:
-            self.disconnect()
-        except:
-            pass
-        while True: 
-            try: 
-                self.connect()
-                break
-            except Exception as e:
-                self.event.log('E', 'Reconnect failed, retrying in 5 seconds...')
-                time.sleep(5) 
-        self.event.log('I', 'Reconnected successfully!')
-        self.subscribe(self.subscribed_topic)
-    
-    def set_rec(self, state):
-        self.received=state
-    def get_rec(self):
-        return self.received
-    def set_publish_in_json(self, state):
-        self.injson = state
-        
-    def mqtt_ping(self):
+    # Utils --------------------------------------------------------------------------------------------------------------------
+    def send_alive(self):
+        data = {
+            "status": "online",
+            "uptime": self.get_uptime(),
+            "ip": self.ip_adress,
+            "mqtt_handler_version": version,
+            "client_id": self.client_id,
+            "subscribed_to": self.subscribed_topics
+        }
+        self.publish(f'uBaldr/{self.client_id}/status', data, use_raw_string=True)
+
+    def get_uptime(self):
+        millis = time.ticks_ms()
+
+        secs = millis // 1000
+        mins = secs // 60
+        hrs = mins // 60
+        days = hrs // 24
+
+        # return string in format 1d 04h 20m
+        return f'{days}d {hrs % 24:02d}h {mins & 60:02d}m'
+
+    def mqtt_ping(self, cooldown=10):
         current_time = time.time()
         if current_time - self.last_ping > self.ping_interval:
             try:
                 self.client.ping()
                 self.last_ping = current_time
             except Exception as e:
-                self.event.log('E', f'Ping failed - {e}')
+                self.event.log('E', f'Ping failed - {e} | Waiting {cooldown}s to reconnect')
+                time.sleep(10)
                 self.reconnect()
-        
+
+    def set_rec(self, state):
+        self.received=state
+
+    def get_rec(self):
+        return self.received
     
-    # Update-function
+    def set_publish_in_json(self, state):
+        self.injson = state  
+
+    def set_ip(self, ip):
+        self.ip_adress = ip
+
+    # Update-function ----------------------------------------------------------------------------------------------------------
     def perform_ota_update(
             self, 
             module_name='all', 
@@ -228,13 +286,13 @@ class MQTTHandler:
                     with open(name, "w") as f:
                         f.write(response.text)
                     self.ota_event.log('I', f'{name} updated successfully')
-                    self.publish(f"{self.client_id}/status/update", {"msg": f'{name} update was successful!', "is_err_msg": False, "origin": "OTA_Update"})
+                    self.publish(f"uBaldr/{self.client_id}/status/update", {"msg": f'{name} update was successful!', "is_err_msg": False, "origin": "OTA_Update"})
                 else:
                     self.ota_event.log('E', f'Could not download {name}')
-                    self.publish(f"{self.client_id}/status/update", {"msg": f'update failed for {name}', "is_err_msg": True, "origin": "OTA_Update"})
+                    self.publish(f"uBaldr/{self.client_id}/status/update", {"msg": f'update failed for {name}', "is_err_msg": True, "origin": "OTA_Update"})
             except Exception as e:
                 self.ota_event.log('F', f'Update failed for {name} - {e}')
-                self.publish(f"{self.client_id}/status/update", {"msg": f'update error for {name}: {e}', "is_err_msg": True, "origin": "OTA_Update"})
+                self.publish(f"uBaldr/{self.client_id}/status/update", {"msg": f'update error for {name}: {e}', "is_err_msg": True, "origin": "OTA_Update"})
 
         if isinstance(module_name, list):
             anz = len(module_name)
@@ -246,12 +304,12 @@ class MQTTHandler:
                 # send update progress to the broker
                 act += 1
                 perc = round((act/anz*100),0)
-                self.publish(f"{self.client_id}/status/update", {"msg": f"update", "progress": perc, "is_err_msg": False, "origin": "OTA_Update"}, use_raw_string=True)
+                self.publish(f"uBaldr/{self.client_id}/status/update", {"msg": f"update", "progress": perc, "is_err_msg": False, "origin": "OTA_Update"}, use_raw_string=True)
             
-            self.publish(f"{self.client_id}/status/update", {"msg": "OTA-Update done! Will now reboot...", "is_err_msg": False, "origin": "OTA_Update"})       
+            self.publish(f"uBaldr/{self.client_id}/status/update", {"msg": "OTA-Update done! Will now reboot...", "is_err_msg": False, "origin": "OTA_Update"})       
             self.ota_event.log('I', 'Update done. Will now reboot ...')
             import machine
             machine.reset()
         
         else:
-            self.publish(f"{self.client_id}/status/update", {"msg": "No module updated. Please send the modules in list-format! Try the provided string from github.", "is_err_msg": True, "origin": "OTA_Update"})
+            self.publish(f"uBaldr/{self.client_id}/status/update", {"msg": "No module updated. Please send the modules in list-format! Try the provided string from github.", "is_err_msg": True, "origin": "OTA_Update"})
