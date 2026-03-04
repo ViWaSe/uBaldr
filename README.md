@@ -36,15 +36,15 @@ The Project works with MQTT-Topics. <client>/order ist the order you send to the
   - There is also an /log-topic to get logfiles (device/status/log)
 
 # MQTT topics
-- Topics can be set in the confic JSON-File in the section "MQTT-config". "topics" should be a list with the topics to subscribe.
-- The client subscribes to 3 topics by default:
--- <b>uBaldr/all</b>			 Every device subscribes to this topic
--- <b>uBaldr/<Client-id>/main:</b> The main topic for the client
--- <b>uBaldr/<Client-id>/echo:</b> Used only for echo-messages
-- There are 3 topics, the client publishes:
--- <b>uBaldr/<Client-id>/status:</b> Status-topic, used for alive-messages
--- <b>uBaldr/<Client-id>/status/log:</b> For sending logfile-content
--- <b>uBaldr/<Client-id>/answer:</b> Used for any answer-message
+### Topics can be set in the confic JSON-File in the section "MQTT-config". "topics" should be a list with the topics to subscribe.
+### The client subscribes to 3 topics by default:
+-  <b>uBaldr/all</b>			 Every device subscribes to this topic
+-  <b>uBaldr/<Client-id>/main:</b> The main topic for the client
+-  <b>uBaldr/<Client-id>/echo:</b> Used only for echo-messages
+### There are 3 topics, the client publishes:
+-  <b>uBaldr/<Client-id>/status:</b> Status-topic, used for alive-messages
+-  <b>uBaldr/<Client-id>/status/log:</b> For sending logfile-content
+-  <b>uBaldr/<Client-id>/answer:</b> Used for any answer-message
 
 # Alive-JSON
 - From Version 7.3, the clients sends a Alive-JSON on first connect or a message is received on uBaldr/<client-id>/echo.
