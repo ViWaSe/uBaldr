@@ -5,7 +5,7 @@
     "order.py": [7,3,0],
     "ntp_simple.py": [3,2,1],
     "mqtt_handler.py": [3,1,0],
-    "mqtt_Client.py": [7,2,1],
+    "mqtt_Client.py": [7,2,2],
     "logger.py": [3,4,0],
     "led_controller.py": [1,1,0],
     "json_config_parser.py": [2,2,1],

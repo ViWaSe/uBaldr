@@ -4,10 +4,9 @@
 # The incoming orders are processed and executed by order.py and the answer is published to the status-topic
 # Settings stored in config.json
 
-version = [7,2,1]
+version = [7,2,2]
 
 import utime as time
-from mqtt_handler import MQTTHandler
 from uWifi import Client
 from json_config_parser import config
 from ntp_simple import NTP
@@ -64,7 +63,7 @@ led_state = 1
 last_change = 0
 ledCount = 0
 
-
+from mqtt_handler import MQTTHandler
 mqtt = MQTTHandler(
     client_id=mqttClient,
     broker=mqttBroker,
