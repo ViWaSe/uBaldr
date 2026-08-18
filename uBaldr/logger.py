@@ -1,4 +1,4 @@
-version = [3,3,1]
+version = [3,4,0]
 
 import os
 import time
@@ -54,16 +54,17 @@ class Create:
         'E': '[  ERROR ]',
         'W': '[  WARN  ]',
         'F': '[  FATAL ]',
-        'N': '[  N/A   ]'
+        'N': '[  N/A   ]',
+        'S': '[ System ]'
     }
         event_level = LOG_LEVEL.get(level)
 
         if self.loglevel == 0:
-            if level == 'E' or level == 'F':
+            if level == 'E' or level == 'F' or level == 'S':
                 with open(self.filepath, 'a') as file:
                     file.write(f'\n{self._timestamp()} >>> {event_level}: {str(event)}')
         elif self.loglevel == 1:
-            if level == 'E' or level == 'F' or level == 'W':
+            if level == 'E' or level == 'F' or level == 'W' or level == 'S':
                 with open(self.filepath, 'a') as file:
                     file.write(f'\n{self._timestamp()} >>> {event_level}: {str(event)}')
         elif self.loglevel == 2:

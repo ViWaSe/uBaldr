@@ -1,6 +1,6 @@
 # New MQTT-Handler Module for Baldr V6.x
 
-version = [2,3,2]
+version = [3,1,0]
 
 from umqtt_simple import MQTTClient
 import utime as time
@@ -45,14 +45,12 @@ class MQTTHandler:
         self.received = False
 
         self.event = logger.Create('MQTT_Handler', '/log/')
-        self.ota_event = logger.Create('OTA', '/log/')
+        self.ota_event = logger.Create('OTA', '/log/', loglevel=2)
         
         self.last_ping = time.time()
         self.ping_interval = 15
 
-        self.ip_adress = ''
-
-    
+        self.ip_adress = ''   
 
     # Connection ---------------------------------------------------------------------------------------------------------------
     def connect(self):
@@ -108,12 +106,9 @@ class MQTTHandler:
                 self.event.log('I', f'Subscribed to {topic}')
             self.send_alive()
 
-    # TODO: Remove the topic from the JSON-config
-    def unsubscribe(self, topic, remove=False):
+    def unsubscribe(self, topic):
         self.client.unsubscribe(topic)
         self.subscribed_topics.remove(topic)
-        if remove:
-            self.topics.remove(topic)
     
     # Message functions---------------------------------------------------------------------------------------------------------
 
@@ -163,7 +158,8 @@ class MQTTHandler:
             if payload.get('sub_type') == 'admin' and payload.get('command') == 'get_update':
                 modules = payload.get('module') 
                 base_url = payload.get('base_url')
-                self.perform_ota_update(modules, base_url)
+                server_versions = payload.get('version_manifest')
+                self.perform_ota_update(modules, base_url, server_versions)
                 return
 
             ans = run(in_message)
@@ -245,11 +241,33 @@ class MQTTHandler:
     def set_ip(self, ip):
         self.ip_adress = ip
 
+    # Delete pending files / Modules that are removed during OTA-Update
+    def delete_pending_files(self):
+        import os
+
+        try:
+            with open('params/versions.json', 'r') as d:
+                delete = json.load(d)
+        except OSError:
+            delete = []
+        
+        for module in delete:
+            try:
+                os.remove(module)
+                self.event.log('S', f'Removed pending file {module} from flash')
+            except OSError:
+                pass
+        try:
+            os.remove('params/deletes_pending.json')
+        except OSError:
+            pass
+
     # Update-function ----------------------------------------------------------------------------------------------------------
     def perform_ota_update(
             self, 
-            module_name='all', 
-            base_url='BASE_URL'
+            updates='all', 
+            base_url='BASE_URL',
+            version_manifest=''
             ):
         
         """
@@ -257,27 +275,54 @@ class MQTTHandler:
 
         Parameter:
             modul_name (str): Name of the target-Module (e.g. NTP.py). If set to 'all', all modules will be updated
-            base_url: The location of the update-Files
+            base_url (str): The location of the update-Files
+            version_manifest (str): Must be a JSON-String with ALL Versions, the devise should use. NOTE: Modules that don't exist in the manifest will be deleted.
         """
 
         import urequests as requests
         import os
 
-        if module_name == 'all':
-            module_name = [
-                'main.py',
-                'mqtt_handler.py',
-                'LightControl.py',
-                'uWifi.py',
-                'mqtt_Client.py',
-                'order.py',
-                'logger.py',
-                'Led_controller.py',
-                'json_config_parser.py',
-                'ntp_simple.py',
-                'versions.py'
-                ]
+        SPECIAL_KEYS = {"Main-Version"}
 
+        updates = []
+        deletes = []
+
+        # Get Manifest:
+        try:
+            server_versions = json.loads(version_manifest)
+        except Exception as e:
+            self.ota_event.log('E', f'Update failed: Version-Manifest is missing or not in the correct format! - {e}')
+            self.publish(f'uBaldr/{self.client_id}/status', 'OTA-Update failed: Could not read version_manifest')
+
+        # Get the module-list from versions.JSON
+        with open('params/versions.json', 'r') as v:
+            local_versions = json.load(v)
+
+        # Update Modules with higher server-version
+        for module, server_ver in server_versions.items():
+
+            if module in SPECIAL_KEYS:
+                continue
+
+            if module not in local_versions:
+                updates.append(module)
+                continue
+
+            if tuple(server_ver) > tuple(local_versions[module]):
+                updates.append(module)
+        
+        # Delete modules that do not exist in the manifest
+        for module in local_versions:
+            if module in SPECIAL_KEYS:
+                continue
+            if module not in server_versions:
+                deletes.append(module)
+        
+        # Write the modules to delete to the deletes_pending file
+        with open('params/deletes_pending.json', 'w') as f:
+            json.dump(deletes, f)
+
+        # Actual update of the modules
         def update_single_module(name, url):
             try:
                 self.ota_event.log('I', f'Downloading {name} from {url}')
@@ -294,10 +339,10 @@ class MQTTHandler:
                 self.ota_event.log('F', f'Update failed for {name} - {e}')
                 self.publish(f"uBaldr/{self.client_id}/status/update", {"msg": f'update error for {name}: {e}', "is_err_msg": True, "origin": "OTA_Update"})
 
-        if isinstance(module_name, list):
-            anz = len(module_name)
+        if isinstance(updates, list):
+            anz = len(updates)
             act = 0
-            for mod in module_name:
+            for mod in updates:
                 url = base_url + mod
                 update_single_module(mod, url)
                 

@@ -1,33 +1,15 @@
-from mqtt_Client import version as Client
-from uWifi import version as Wifi
-from order import version as Order
-from ntp_simple import Version as NTP
-from LightControl import version as LC
-from json_config_parser import version as json
-from mqtt_handler import version as mqtt_handler
-from Led_controller import version as led_controller
-from logger import version as logger
-from umqtt_simple import version as umqtt
+# v2.2.0
+import json
 import sys
 
-version = [1,3,1, 'c']
+with open('params/versions.json', 'r') as v:
+    versions = json.load(v)
 
 platform = sys.platform
 
-versions = {
-    'Client': Client, 
-    'Wifi': Wifi, 
-    'order': Order, 
-    'ntp_simple': NTP, 
-    'LightControl': LC, 
-    'json': json, 
-    'mqtt_handler': mqtt_handler,
-    'Led_controller': led_controller,
-    'logger': logger,
-    'main': [7,3,1],
-    'last umqtt_simple': [f'{umqtt[0]}/{umqtt[1]}/{umqtt[2]}'],
-    'Platform': [str(platform)]
-    }
+modules = []
+for name in versions:
+    modules.append(name)
 
 def by_module(module):
     sub = versions[module]
