@@ -5,7 +5,7 @@
 # NOTE: The "type: ignore" commtents are for the vs-code micropico extension only! The main reason is that the values from the JSON-File are unknown
 # NOTE: For WW/CW LEDs (24V): setting bpp = 3 is required (Byte 0=warm, 1=cold, 2=not used)
 
-version=[7,2,4]
+version=[7,2,5]
 
 import utime as time
 from neopixel import NeoPixel
@@ -305,10 +305,10 @@ class LightControl:
 # Utils ------------------------------------------------------------------------------------------------
 
     def change_autostart(self, value):
-        self.status.save_param(param='autostart', new_value=value)
+        self.settings.save_param(group='LightControl_settings', param='autostart', new_value=value)
     
     def change_pixel_qty(self, value):
-        self.status.save_param(param='led_qty', new_value=value)
+        self.settings.save_param(group='LightControl_settings', param='led_qty', new_value=value)
     
     def get_info(self):
         return {"version": version, "led_qty": self.pixel_qty, "led_pin": self.led_pin, "color": self.cache, "light_level": self.dim_status}
@@ -321,22 +321,3 @@ class LightControl:
 
 # Auto-initialize LEDs
 LC = LightControl()
-
-"""
-def set_smooth(self, target_color, speed=10, steps=50):
-    current = list(self.cache)
-    target = list(target_color)
-    while len(target) < 4: target.append(0)
-    
-    # Vorbereiten der Differenzen spart Rechenzeit in der Schleife
-    diffs = [target[i] - current[i] for i in range(4)]
-    
-    for step in range(1, steps + 1):
-        # Ganzzahl-Arithmetik für Geschwindigkeit
-        intermediate = [
-            int(current[i] + (diffs[i] * step // steps))
-            for i in range(4)
-        ]
-        self.static(intermediate, self.level)
-        time.sleep_ms(speed)
-"""

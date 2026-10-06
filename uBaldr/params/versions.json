@@ -9,5 +9,6 @@
     "logger.py": [3,4,0],
     "led_controller.py": [1,1,0],
     "json_config_parser.py": [2,2,1],
-    "boot.py": [1,0,1]
+    "boot.py": [1,0,1],
+    "LightControl.py": [7,2,5]
 }
