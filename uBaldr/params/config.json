@@ -1,5 +1,5 @@
 {
-    "config_version": "5.4",
+    "config_version": "5.5",
     "created_by": "default",
 
     "LightControl_settings": [
@@ -18,16 +18,10 @@
             "Port": 1883,
             "PW": "",
             "User": "",
-            "publish_in_json": true
-        }
-    ],
-    "Options": [
-        {
-            "BMP180": false,
-            "LightControl": true,
-            "MotionDetect": false,
-            "RelayControl": false,
-            "Sensor": false
+            "publish_in_json": true,
+            "topics": [
+                "test"
+            ]
         }
     ],
     "Wifi-config": [

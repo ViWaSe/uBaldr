@@ -1,5 +1,5 @@
 # ntp_simple.py
-Version = [3,2,1]
+version = [3,2,1]
 
 import time
 import machine

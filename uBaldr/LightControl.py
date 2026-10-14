@@ -27,7 +27,7 @@ class LightControl:
             logging=True,
             led_pin=15,
             bpp=3,
-            pixel_pty=12,
+            pixel_qty=12,
             autostart=True
             ):
         
@@ -39,7 +39,7 @@ class LightControl:
             logging (bool): Events are logged in the /log/ directory
             led_pin (int): Neopixel LED-Pin.
             bpp (int): Bytes per pixel value. 3=RGB, 4=RGBW
-            pixel_pty (int): The Number of LEDs that are adressed.
+            pixel_qty (int): The Number of LEDs that are adressed.
             autostart (bool): Load the last color- and dim- setting from the status.json file.
 
         Methods:
@@ -62,7 +62,7 @@ class LightControl:
         else:
             self.led_pin    = led_pin
             self.bpp        = bpp
-            self.pixel_qty  = pixel_pty
+            self.pixel_qty  = pixel_qty
             self.autostart  = autostart
 
         self.status     = config(status_file, layers=1)

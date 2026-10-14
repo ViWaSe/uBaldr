@@ -1,12 +1,13 @@
 # New MQTT-Handler Module for Baldr V6.x
 
-version = [3,1,0]
+version = [3,2,0]
 
 from umqtt_simple import MQTTClient
 import utime as time
 import json
 import ujson
 import logger
+import sys
 from order import run
 
 # If typing don't exist:
@@ -51,6 +52,7 @@ class MQTTHandler:
         self.ping_interval = 15
 
         self.ip_adress = ''   
+        self.platform = sys.platform
 
     # Connection ---------------------------------------------------------------------------------------------------------------
     def connect(self):
@@ -203,7 +205,8 @@ class MQTTHandler:
             "ip": self.ip_adress,
             "mqtt_handler_version": version,
             "client_id": self.client_id,
-            "subscribed_to": self.subscribed_topics
+            "subscribed_to": self.subscribed_topics,
+            "platform": self.platform
         }
         self.publish(f'uBaldr/{self.client_id}/status', data, use_raw_string=True)
 

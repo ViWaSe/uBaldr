@@ -4,7 +4,7 @@
 # The incoming orders are processed and executed by order.py and the answer is published to the status-topic
 # Settings stored in config.json
 
-version = [7,2,2]
+version = [7,2,3]
 
 import utime as time
 from uWifi import Client
@@ -81,8 +81,8 @@ wd_event = logger.Create(file_name='Watchdog', dir='/log', max_size=1024, loglev
 def watchdog(
         watch_time=60, 
         cooldown=5,
-        timeout_loops=5,
-        timeout_pause=500
+        timeout_loops=10,
+        timeout_pause=1000
         ):
     global last_msg, wd_counter, watchdog_last_chk
 
@@ -117,7 +117,8 @@ def watchdog(
                 time.sleep_ms(timeout_pause)
             
             if not state:
-                wd_event.log('E', 'Message wait timeout. Probably connection lost.')
+                wd_event.log('E', 'Timeout - No connection to server. Waiting 10 seconds for reconnect...')
+                time.sleep(10)
                 mqtt.reconnect()
     return True
 
